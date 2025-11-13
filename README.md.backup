@@ -1,0 +1,178 @@
+# Reolink AIO TypeScript
+
+TypeScript/Node.js port of the Reolink NVR/camera API library.
+
+This is a TypeScript implementation of the [reolink_aio](https://github.com/StarkillerOG/reolink_aio) Python library, providing the same functionality for Node.js applications.
+
+## Description
+
+This package implements the Reolink IP NVR and camera API. It provides a way to:
+- Control Reolink cameras and NVRs
+- Subscribe to Reolink ONVIF SWN events
+- Receive real-time events via webhook or TCP push
+- Access camera settings, states, and capabilities
+
+## Prerequisites
+
+- Node.js 18+ or 20+
+- TypeScript 5.3+
+
+## Installation
+
+```bash
+npm install reolink-aio-ts
+```
+
+Or from source:
+
+```bash
+git clone <repository-url>
+cd reolink-aio-ts
+npm install
+npm run build
+```
+
+## Usage
+
+### Basic Example
+
+```typescript
+import { Host } from 'reolink-aio-ts';
+
+async function main() {
+  // Create a host-object (representing either a camera, or NVR with several channels)
+  const host = new Host('192.168.1.10', 'user', 'mypassword');
+
+  // Obtain/cache NVR or camera settings and capabilities
+  await host.getHostData();
+
+  // Get the subscription port and host-device name
+  const subscriptionPort = host.onvifPortValue;
+  const name = host.nvrName;
+
+  // Obtain/cache states of features
+  await host.getStates();
+
+  // Print some state value on the channel with index 0
+  console.log(host.irEnabled(0));
+
+  // Enable the infrared lights on the channel with index 1
+  await host.setIrLights(1, true);
+
+  // Enable the spotlight on the channel with index 1
+  await host.setSpotlight(1, true);
+
+  // Enable the siren on the channel with index 0
+  await host.setSiren(0, true);
+
+  // Logout and disconnect
+  await host.logout();
+}
+
+main().catch(console.error);
+```
+
+### Get MAC Address Example
+
+```typescript
+import { Host } from 'reolink-aio-ts';
+
+async function printMacAddress() {
+  // Initialize the host
+  const host = new Host('192.168.1.109', 'admin', 'admin1234', 80);
+  
+  // Connect and obtain/cache device settings and capabilities
+  await host.getHostData();
+  
+  // Check if it is a camera or an NVR
+  console.log(`It is an NVR: ${host.isNvrValue}, number of channels: ${host.numChannel}`);
+  
+  // Print MAC address
+  console.log(`MAC: ${host.macAddressValue}`);
+  
+  // Close the device connection
+  await host.logout();
+}
+
+printMacAddress().catch(console.error);
+```
+
+### TCP Push Event Example
+
+```typescript
+import { Host } from 'reolink-aio-ts';
+
+function callback(): void {
+  console.log('Callback called');
+}
+
+async function tcpPushDemo() {
+  // Initialize the host
+  const host = new Host('192.168.1.109', 'admin', 'admin1234');
+  
+  // Connect and obtain/cache device settings and capabilities
+  await host.getHostData();
+  
+  // Register callback and subscribe to events
+  host.baichuan.registerCallback('unique_id_string', callback);
+  await host.baichuan.subscribeEvents();
+  
+  // Process TCP events for 2 minutes
+  await new Promise(resolve => setTimeout(resolve, 120000));
+  
+  // Unsubscribe and close the device connection
+  await host.baichuan.unsubscribeEvents();
+  await host.logout();
+}
+
+tcpPushDemo().catch(console.error);
+```
+
+## API Compatibility
+
+This TypeScript port maintains API compatibility with the Python version where possible. The main differences are:
+
+- Method names use camelCase instead of snake_case (e.g., `getHostData()` instead of `get_host_data()`)
+- Property access uses getters (e.g., `host.isNvrValue` instead of `host.is_nvr`)
+- TypeScript types are provided for better IDE support
+
+## Migration from Python
+
+If you're migrating from the Python version:
+
+1. Replace `snake_case` method names with `camelCase`
+2. Replace property access with getter methods (e.g., `host.is_nvr` → `host.isNvrValue`)
+3. Use TypeScript/JavaScript async/await patterns
+4. Import from `'reolink-aio-ts'` instead of `'reolink_aio'`
+
+## Development
+
+### Building
+
+```bash
+npm run build
+```
+
+This will compile TypeScript to both ESM and CommonJS formats.
+
+### Testing
+
+```bash
+npm test
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+## License
+
+MIT
+
+## Acknowledgments
+
+This library is a TypeScript port of the [reolink_aio](https://github.com/StarkillerOG/reolink_aio) Python library by @starkillerOG.
+
+The original library is officially authorized by Reolink and built with the support of Reolink's official resources.

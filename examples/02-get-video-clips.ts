@@ -13,7 +13,7 @@ import { VodRequestType } from '../src/enums';
 import { VODTrigger } from '../src/types';
 
 async function getVideoClips() {
-  const host = new Host('192.168.0.255', 'admin', 'password');
+  const host = new Host('192.168.1.100', 'admin', 'your_password');
 
   try {
     console.log('🔌 Connecting to device...');

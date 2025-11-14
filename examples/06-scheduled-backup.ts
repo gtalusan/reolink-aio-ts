@@ -22,7 +22,8 @@ interface BackupConfig {
 }
 
 async function scheduledBackup() {
-  const host = new Host('192.168.0.255', 'admin', 'password');
+    // UPDATE THESE VALUES FOR YOUR NVR
+  const host = new Host('192.168.1.100', 'admin', 'your_password');
   
   const config: BackupConfig = {
     backupDir: './backups',

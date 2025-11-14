@@ -43,7 +43,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 async function motionMonitor() {
-  const host = new Host('192.168.0.255', 'admin', 'password');
+  // UPDATE THESE VALUES FOR YOUR CAMERA/NVR
+  const host = new Host('192.168.1.100', 'admin', 'your_password');
 
   try {
     console.log('🔌 Connecting to device...');

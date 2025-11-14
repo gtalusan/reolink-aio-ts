@@ -749,6 +749,10 @@ export class Host {
     return this.model.get(channel) || UNKNOWN;
   }
 
+  cameraUid(channel: number | null): string {
+    return this.uid.get(channel) || UNKNOWN;
+  }
+
   cameraHardwareVersion(channel: number | null): string {
     return this.hwVersion.get(channel) || UNKNOWN;
   }
@@ -879,21 +883,37 @@ export class Host {
    * @param duration - Duration in seconds (default: 2)
    * @param times - Number of times to play siren (default: 1, 0 for continuous)
    */
-  async setSiren(channel: number | null = null, enabled: boolean = true, duration: number = 2, times: number = 1): Promise<void> {
+  async setSiren(channel: number | null = null, enabled: boolean = true, duration: number | null = 2, times: number | null = null): Promise<void> {
     // Validate channel if provided and channels are available
     if (channel !== null && this.channels.length > 0 && !this.channels.includes(channel)) {
       throw new InvalidParameterError(`setSiren: no camera connected to channel '${channel}'`);
     }
 
-    // If channel is null, use first available channel (or 0 if channels not loaded yet)
-    const targetChannel = channel !== null ? channel : (this.channels[0] ?? 0);
-    
-    // Use Baichuan protocol to control the siren
+    const targetChannel = channel !== null ? channel : this.channels[0] ?? null;
+
+  if (targetChannel === null && !this.isHub) {
+      throw new InvalidParameterError('setSiren: no channels available');
+    }
+
     if (!this.baichuan) {
       throw new NotSupportedError('setSiren: Baichuan protocol not initialized');
     }
 
-    await this.baichuan.audioAlarmPlay(targetChannel, enabled, duration, times);
+    const plays = times ?? duration ?? 1;
+
+    let alarmOptions: { alarmMode: "times" | "manual"; times?: number; manualSwitch?: boolean };
+
+    if (enabled) {
+      if (plays !== null && plays > 0) {
+        alarmOptions = { alarmMode: "times", times: Math.max(1, Math.round(plays)) };
+      } else {
+        alarmOptions = { alarmMode: "manual", manualSwitch: true };
+      }
+    } else {
+      alarmOptions = { alarmMode: "manual", manualSwitch: false };
+    }
+
+    await this.baichuan.audioAlarmPlay(targetChannel, alarmOptions);
   }
 
   /**

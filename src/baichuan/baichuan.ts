@@ -330,6 +330,7 @@ export class Baichuan {
     if (debugLog) {
       if (messLen > 0) {
         debugLog(`Baichuan host ${this.host}: writing cmd_id ${cmdId}, body:\n${this.hidePassword(ext + body)}`);
+        debugLog(`Baichuan host ${this.host}: BODY DETAILS: ext.length=${ext.length}, body.length=${body.length}, messLen=${messLen}, payloadOffset=${payloadOffset}`);
       } else {
         debugLog(`Baichuan host ${this.host}: writing cmd_id ${cmdId}, without body`);
       }
@@ -345,8 +346,13 @@ export class Baichuan {
         setTimeout(() => resolve(), 0);
       });
 
-      debugLog(`Baichuan host ${this.host}: writing to socket for cmd_id ${cmdId}, mess_id ${messId}, data length ${header.length + encBodyBytes.length}`);
-      this.transport.write(Buffer.concat([header, encBodyBytes]));
+      const fullData = Buffer.concat([header, encBodyBytes]);
+      debugLog(`Baichuan host ${this.host}: writing to socket for cmd_id ${cmdId}, mess_id ${messId}, data length ${fullData.length}`);
+      debugLog(`Baichuan host ${this.host}: HEX DUMP header (${header.length} bytes): ${header.toString('hex')}`);
+      if (encBodyBytes.length > 0 && encBodyBytes.length <= 500) {
+        debugLog(`Baichuan host ${this.host}: HEX DUMP encrypted body (${encBodyBytes.length} bytes): ${encBodyBytes.toString('hex')}`);
+      }
+      this.transport.write(fullData);
       [data, lenHeader] = await responsePromise;
       debugLog(`Baichuan host ${this.host}: received response for cmd_id ${cmdId}, mess_id ${messId}`);
     } catch (err: any) {
@@ -947,45 +953,54 @@ export class Baichuan {
 
   /**
    * Play an audio alarm (siren) on the camera
-   * @param channel - Channel number
-   * @param enabled - true to enable siren, false to disable
-   * @param duration - Duration in seconds (default: 2)
-   * @param times - Number of times to play (default: 1, 0 for continuous)
+   * @param channel - Channel number (null for hub-wide)
+   * @param options - Alarm play parameters
    */
-  async audioAlarmPlay(channel: number, enabled: boolean = true, duration: number = 2, times: number = 1): Promise<void> {
+  async audioAlarmPlay(
+    channel: number | null,
+    options: { alarmMode: "times" | "manual"; times?: number; manualSwitch?: boolean }
+  ): Promise<void> {
     const isHub = this.httpApi["_isHub"] || false;
+    const alarmMode = options.alarmMode;
+    const times = Math.max(1, options.times ?? 1);
+    const manualSwitch = options.manualSwitch ?? true;
+
     let xml: string;
 
-    if (times === 1) {
-      // Manual mode - play once
-      if (isHub) {
-        xml = xmls.buildSirenHubManualXml({ 
-          enable: enabled ? '1' : '0' 
-        });
+    if (channel !== null) {
+      if (alarmMode === "times") {
+        xml = xmls.buildSirenTimesXml({ channel: channel.toString(), times: times.toString() });
       } else {
-        xml = xmls.buildSirenManualXml({ 
-          channel: channel.toString(),
-          enable: enabled ? '1' : '0' 
-        });
+        xml = xmls.buildSirenManualXml({ channel: channel.toString(), enable: manualSwitch ? "1" : "0" });
+      }
+    } else if (isHub) {
+      if (alarmMode === "times") {
+        xml = xmls.buildSirenHubTimesXml({ times: times.toString() });
+      } else {
+        xml = xmls.buildSirenHubManualXml({ enable: manualSwitch ? "1" : "0" });
       }
     } else {
-      // Times mode - play multiple times
-      if (isHub) {
-        xml = xmls.buildSirenHubTimesXml({ 
-          times: times.toString() 
-        });
-      } else {
-        xml = xmls.buildSirenTimesXml({ 
-          channel: channel.toString(),
-          times: times.toString() 
-        });
-      }
+      throw new InvalidParameterError(`audioAlarmPlay: channel must be specified for non-hub devices`);
     }
 
-    // Send the command with cmd_id 546 (AudioAlarmPlay)
-    await this.send(546, channel, xml, "", EncType.AES);
-    
-    debugLog(`Baichuan host ${this.host}: Audio alarm ${enabled ? 'enabled' : 'disabled'} on channel ${channel}`);
+    try {
+      await this.send(263, channel, xml);
+      debugLog(
+        `Baichuan host ${this.host}: Audio alarm ${alarmMode === "times" ? `times=${times}` : manualSwitch ? "manual on" : "manual off"} on channel ${channel}`
+      );
+    } catch (err) {
+      if (alarmMode === "manual" && manualSwitch) {
+        debugLog(
+          `Baichuan host ${this.host}: AudioAlarmPlay manual mode failed, retrying with times fallback (channel ${channel})`
+        );
+        const fallbackXml = channel !== null
+          ? xmls.buildSirenTimesXml({ channel: channel.toString(), times: "2" })
+          : xmls.buildSirenHubTimesXml({ times: "2" });
+        await this.send(263, channel, fallbackXml);
+        return;
+      }
+      throw err;
+    }
   }
 
   /**

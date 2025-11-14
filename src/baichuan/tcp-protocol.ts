@@ -156,8 +156,9 @@ export class BaichuanTcpClientProtocol extends EventEmitter {
       }
       const recPayloadOffset = this.data.readUInt32LE(20);
       if (recPayloadOffset !== 0) {
-        this.setError("with a non-zero payload offset, parsing not implemented", InvalidContentTypeError, recCmdId, recMessId);
-        return;
+        debugLog(
+          `Baichuan host ${this.host}: received payload offset ${recPayloadOffset} for cmd_id ${recCmdId}, proceeding with parsing`
+        );
       }
     } else if (messClass === "1465") {
       // legacy 20 byte header
@@ -339,7 +340,7 @@ export class BaichuanTcpClientProtocol extends EventEmitter {
     // Set timeout
     const timeoutId = setTimeout(() => {
       cmdFutures?.delete(messId);
-      if (cmdFutures.size === 0) {
+      if (cmdFutures && cmdFutures.size === 0) {
         this.receiveFutures.delete(cmdId);
       }
       reject(new ReolinkTimeoutError(`Baichuan host ${this.host}: timeout waiting for response cmd_id ${cmdId} mess_id ${messId}`));
@@ -347,6 +348,11 @@ export class BaichuanTcpClientProtocol extends EventEmitter {
 
     promise.finally(() => {
       clearTimeout(timeoutId);
+      // Clean up the future from the map when done (success or failure)
+      cmdFutures?.delete(messId);
+      if (cmdFutures && cmdFutures.size === 0) {
+        this.receiveFutures.delete(cmdId);
+      }
     });
 
     return promise;

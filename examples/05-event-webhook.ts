@@ -17,7 +17,8 @@ interface WebhookConfig {
 }
 
 async function eventWebhookServer() {
-  const host = new Host('192.168.0.255', 'admin', 'password');
+  // UPDATE THESE VALUES FOR YOUR CAMERA/NVR
+  const host = new Host('192.168.1.100', 'admin', 'your_password');
   
   // Webhook configuration
   const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:3001/webhook';

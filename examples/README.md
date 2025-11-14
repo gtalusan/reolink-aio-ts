@@ -28,7 +28,7 @@ Demonstrates how to:
 
 **Run:**
 ```bash
-npx ts-node examples/01-basic-connection.ts
+npx tsx examples/01-basic-connection.ts
 ```
 
 ---
@@ -44,7 +44,7 @@ Demonstrates how to:
 
 **Run:**
 ```bash
-npx ts-node examples/02-get-video-clips.ts
+npx tsx examples/02-get-video-clips.ts
 ```
 
 ---
@@ -60,7 +60,7 @@ Demonstrates how to:
 
 **Run:**
 ```bash
-npx ts-node examples/03-motion-monitor.ts
+npx tsx examples/03-motion-monitor.ts
 ```
 
 Press `Ctrl+C` to stop monitoring.
@@ -78,7 +78,7 @@ Demonstrates how to:
 
 **Run:**
 ```bash
-npx ts-node examples/04-download-clips.ts
+npx tsx examples/04-download-clips.ts
 ```
 
 **Note:** Direct download functionality requires the `downloadVod` method to be fully implemented. Currently, the example shows how to get download URLs.
@@ -96,7 +96,7 @@ Demonstrates how to:
 
 **Run:**
 ```bash
-npx ts-node examples/05-event-webhook.ts
+npx tsx examples/05-event-webhook.ts
 ```
 
 The server will listen on `http://localhost:3001/webhook`. Configure your Reolink device to send webhooks to this endpoint.
@@ -117,7 +117,7 @@ Demonstrates how to:
 
 **Run:**
 ```bash
-npx ts-node examples/06-scheduled-backup.ts
+npx tsx examples/06-scheduled-backup.ts
 ```
 
 The script will:
@@ -141,16 +141,16 @@ Edit the `config` object in the script to customize:
 Demonstrates how to:
 - Control IR lights (infrared illumination)
 - Control spotlight/floodlight with brightness
-- Activate siren with duration *(implemented but blocked by Baichuan TCP bug)*
+- Activate siren with duration (fully working!)
 - Set zoom and focus positions (for supported cameras)
 - Handle devices that don't support certain features
 
 **Run:**
 ```bash
-npx ts-node examples/07-device-control.ts
+npx tsx examples/07-device-control.ts
 ```
 
-**Note:** Not all cameras support all features. The example gracefully handles unsupported features. Siren control is implemented but cannot be tested until the Baichuan TCP connection issue is resolved (see [KNOWN_ISSUES.md](../KNOWN_ISSUES.md)).
+**Note:** Not all cameras support all features. The example gracefully handles unsupported features. All control commands including siren are fully functional.
 
 ---
 

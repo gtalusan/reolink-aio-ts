@@ -2,68 +2,130 @@ import type { Readable } from "node:stream";
 
 import { reolinkTimeToDate, toReolinkTimeId } from "../utils";
 
+/** Generic Reolink JSON response type */
 export type ReolinkJson = Array<Record<string, any>>;
 
+/** Command list mapping for Reolink API commands */
 export type CmdListType = Record<string, Record<string, number>> | Record<string, Array<number>> | null;
 
+/**
+ * VOD search status information
+ */
 export interface SearchStatus {
+  /** Month number (1-12) */
   mon: number;
+  /** Table of available recording days as a string */
   table: string;
+  /** Year */
   year: number;
 }
 
+/**
+ * Time representation in Reolink format
+ */
 export interface SearchTime {
+  /** Year */
   year: number;
+  /** Month (1-12) */
   mon: number;
+  /** Day of month (1-31) */
   day: number;
+  /** Hour (0-23) */
   hour: number;
+  /** Minute (0-59) */
   min: number;
+  /** Second (0-59) */
   sec: number;
 }
 
+/**
+ * Represents a video file in search results
+ */
 export interface SearchFile {
+  /** Start time of the recording */
   StartTime: SearchTime;
+  /** End time of the recording */
   EndTime: SearchTime;
+  /** Video frame rate */
   frameRate: number;
+  /** Video height in pixels */
   height: number;
+  /** Video width in pixels */
   width: number;
+  /** File name */
   name: string;
+  /** File size in bytes */
   size: number;
+  /** File type (e.g., "main", "sub") */
   type: string;
 }
 
+/**
+ * Daylight Saving Time configuration
+ */
 export interface GetTimeDst {
+  /** Whether DST is enabled */
   enable: boolean;
+  /** DST offset in hours */
   offset: number;
+  /** DST start month */
   startMon?: number;
+  /** DST start week of month */
   startWeek?: number;
+  /** DST start weekday */
   startWeekday?: number;
+  /** DST start hour */
   startHour?: number;
+  /** DST start minute */
   startMin?: number;
+  /** DST start second */
   startSec?: number;
+  /** DST end month */
   endMon?: number;
+  /** DST end week of month */
   endWeek?: number;
+  /** DST end weekday */
   endWeekday?: number;
+  /** DST end hour */
   endHour?: number;
+  /** DST end minute */
   endMin?: number;
+  /** DST end second */
   endSec?: number;
   [key: string]: number | boolean | undefined;
 }
 
+/**
+ * Current time information from camera/NVR
+ */
 export interface GetTime {
+  /** Current year */
   year: number;
+  /** Current month (1-12) */
   mon: number;
+  /** Current day */
   day: number;
+  /** Current hour */
   hour: number;
+  /** Current minute */
   min: number;
+  /** Current second */
   sec: number;
+  /** Hour format (12 or 24) */
   hourFmt: number;
+  /** Time format string */
   timeFmt: string;
+  /** Timezone offset in seconds */
   timeZone: number;
 }
 
+/**
+ * Complete time response including DST information
+ */
 export interface GetTimeResponse {
+  /** DST configuration */
   Dst: GetTimeDst;
+  /** Current time information */
   Time: GetTime;
 }
 
@@ -169,9 +231,25 @@ function deltaToString(deltaMs: number): string {
   return `${sign}${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Timezone implementation compatible with Reolink camera/NVR time formats.
+ * Handles UTC offsets and Daylight Saving Time transitions.
+ * 
+ * @example
+ * ```typescript
+ * const tz = ReolinkTimezone.createOrGet(timeResponse);
+ * const tzName = tz.tzname(); // "UTC+05:00"
+ * const offset = tz.utcoffset(new Date()); // offset in milliseconds
+ * ```
+ */
 export class ReolinkTimezone {
   private static cache = new Map<string, ReolinkTimezone>();
 
+  /**
+   * Factory method to create or retrieve cached timezone instance
+   * @param data - Time response data from camera/NVR
+   * @returns Cached or new ReolinkTimezone instance
+   */
   static createOrGet(data: GetTimeResponse): ReolinkTimezone {
     const keyParts: Array<string> = [String(data.Time.timeZone)];
     if (data.Dst.enable) {
@@ -207,6 +285,11 @@ export class ReolinkTimezone {
     this.endRule = this.dstEnabled ? createDstRuleCalculator(data.Dst, "end") : null;
   }
 
+  /**
+   * Get timezone name string
+   * @param date - Optional date to check DST status
+   * @returns Timezone name in format "UTC±HH:MM"
+   */
   tzname(date: Date | null = null): string {
     if (date === null) {
       if (!this.nameCache) {
@@ -217,6 +300,11 @@ export class ReolinkTimezone {
     return `UTC${deltaToString(this.utcoffset(date))}`;
   }
 
+  /**
+   * Calculate UTC offset for given date (includes DST if applicable)
+   * @param date - Date to calculate offset for, null for base offset
+   * @returns UTC offset in milliseconds
+   */
   utcoffset(date: Date | null): number {
     if (!this.dstEnabled || date === null) {
       return this.utcOffsetMs;
@@ -228,6 +316,11 @@ export class ReolinkTimezone {
     return this.utcOffsetMs;
   }
 
+  /**
+   * Get DST offset for given date
+   * @param date - Date to check DST status for
+   * @returns DST offset in milliseconds (0 if not in DST period)
+   */
   dst(date: Date | null): number {
     if (!this.dstEnabled || date === null) {
       return 0;
@@ -262,6 +355,18 @@ export class ReolinkTimezone {
   }
 }
 
+/**
+ * Wrapper for VOD search status response, provides iterable interface over recording days
+ * 
+ * @example
+ * ```typescript
+ * const status = new VODSearchStatus(data);
+ * console.log(status.year, status.month); // 2023 11
+ * for (const date of status) {
+ *   console.log(date); // Dates with recordings
+ * }
+ * ```
+ */
 export class VODSearchStatus implements Iterable<Date> {
   private readonly daysCache: Array<number>;
 
@@ -307,6 +412,11 @@ export class VODSearchStatus implements Iterable<Date> {
     };
   }
 
+  /**
+   * Check if a given date has recordings
+   * @param date - Date to check
+   * @returns True if date matches year/month and has recordings
+   */
   contains(date: Date): boolean {
     return date.getUTCFullYear() === this.year && date.getUTCMonth() + 1 === this.month && this.daysCache.includes(date.getUTCDate());
   }
@@ -316,22 +426,50 @@ export class VODSearchStatus implements Iterable<Date> {
   }
 }
 
+/**
+ * VOD trigger types as bit flags for recording triggers.
+ * Multiple triggers can be combined using bitwise OR.
+ * 
+ * @example
+ * ```typescript
+ * const triggers = VODTrigger.MOTION | VODTrigger.PERSON;
+ * if (triggers & VODTrigger.MOTION) {
+ *   console.log("Motion detected");
+ * }
+ * ```
+ */
 export enum VODTrigger {
+  /** No trigger */
   NONE = 0,
+  /** Timer/scheduled recording */
   TIMER = 1 << 0,
+  /** Motion detection */
   MOTION = 1 << 1,
+  /** Vehicle detection (AI) */
   VEHICLE = 1 << 2,
+  /** Animal detection (AI) */
   ANIMAL = 1 << 3,
+  /** Person detection (AI) */
   PERSON = 1 << 4,
+  /** Doorbell press */
   DOORBELL = 1 << 5,
+  /** Package detection */
   PACKAGE = 1 << 6,
+  /** Face detection */
   FACE = 1 << 7,
+  /** IO trigger */
   IO = 1 << 8,
+  /** Baby crying detection */
   CRYING = 1 << 9,
+  /** Crossline detection */
   CROSSLINE = 1 << 10,
+  /** Intrusion detection */
   INTRUSION = 1 << 11,
+  /** Loitering detection */
   LINGER = 1 << 12,
+  /** Forgotten item detection */
   FORGOTTEN_ITEM = 1 << 13,
+  /** Taken item detection */
   TAKEN_ITEM = 1 << 14
 }
 

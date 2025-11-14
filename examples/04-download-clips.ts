@@ -36,7 +36,8 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 async function downloadClips() {
-  const host = new Host('192.168.0.255', 'admin', 'password');
+    // UPDATE THESE VALUES FOR YOUR NVR
+  const host = new Host('192.168.1.100', 'admin', 'your_password');
   const downloadDir = './downloads';
 
   try {

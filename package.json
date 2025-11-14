@@ -1,8 +1,18 @@
 {
   "name": "reolink-aio-ts",
-  "version": "0.0.1",
-  "description": "TypeScript port of the Reolink NVR/camera API",
+  "version": "1.0.0",
+  "description": "TypeScript library for Reolink NVR/camera API with full Baichuan TCP protocol support",
   "license": "MIT",
+  "author": "verheesj",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/verheesj/reolink-aio-ts.git"
+  },
+  "bugs": {
+    "url": "https://github.com/verheesj/reolink-aio-ts/issues"
+  },
+  "homepage": "https://github.com/verheesj/reolink-aio-ts#readme",
+  "keywords": ["reolink", "nvr", "camera", "api", "baichuan", "security", "surveillance"],
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -24,7 +34,9 @@
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "adm-zip": "^0.5.10",

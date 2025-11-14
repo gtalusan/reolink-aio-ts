@@ -1,60 +1,89 @@
 # Known Issues
 
-## Baichuan TCP Connection Reset
+## ~~Baichuan TCP Connection Reset~~ ✅ RESOLVED
 
-**Status:** Known Issue  
-**Severity:** High  
-**Affected:** All operations that call `getHostData()`
+**Status:** ✅ **RESOLVED**  
+**Resolution Date:** November 14, 2025  
+**Severity:** ~~High~~ None
 
-### Symptoms
+### Previous Issue
 
-When calling `getHostData()`, the Baichuan TCP connection is initiated. After the initial connection, subsequent HTTP API calls may fail with:
+Previously, calling `getHostData()` could cause Baichuan TCP connection resets with ECONNRESET errors. This has been completely resolved.
 
-```
-Error: read ECONNRESET
-  at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
-  errno: -54,
-  code: 'ECONNRESET',
-  syscall: 'read'
-```
+### Root Cause (Identified)
 
-### Root Cause
+The issue was caused by:
+1. **Missing blank line in XML protocol** - The Extension and Body XML sections needed a blank line separator to match the Python reference implementation
+2. **Incomplete future cleanup** - Response futures were not being properly cleaned up after completion, causing stale references
 
-The Baichuan protocol implementation has an issue with the TCP connection that causes connection resets. This appears to be an unhandled error in the background TCP connection.
+### Resolution
 
-### Workaround
+The following fixes were implemented:
 
-For now, you can use the HTTP API directly without initializing Baichuan:
+1. **XML Protocol Alignment** (`src/baichuan/xmls.ts`)
+   - Added proper blank line between Extension and Body XML sections
+   - Now matches Python reolink_aio protocol exactly
+
+2. **Future Cleanup** (`src/baichuan/tcp-protocol.ts`)
+   - Added complete cleanup in `waitForResponse()` promise.finally() block
+   - Prevents accumulation of stale futures in receiveFutures map
+
+3. **API Completeness** (`src/api/host.ts`)
+   - Added `cameraUid(channel)` method for consistency
+   - Enhanced debugging capabilities
+
+### Verification
+
+All device control features now work correctly:
+- ✅ IR Lights control
+- ✅ Spotlight/Floodlight control with brightness
+- ✅ **Siren control (AudioAlarmPlay)** - Now fully working!
+- ✅ Focus control
+- ✅ Zoom control
+- ✅ Baichuan event subscriptions
+- ✅ Motion/AI detection monitoring
+
+**Tested on:** Reolink NVR at 192.168.0.79 with multiple camera channels
+
+### Usage
+
+All features work correctly when using proper initialization:
 
 ```typescript
 import { Host } from 'reolink-aio-ts';
 
 const host = new Host('192.168.1.100', 'admin', 'password');
 
-// Login directly (skip getHostData to avoid Baichuan)
-await host.login();
+// Initialize connection (this now works perfectly)
+await host.getHostData();
 
-// Manually set channels if needed
-(host as any)._channels = [0]; // Adjust based on your setup
-(host as any).channels = [0];
-
-// Now you can use device control features
-await host.setIrLights(0, true);
-await host.setSpotlight(0, true, 75);
-await host.setZoom(0, 10);
+// All device control features work
+await host.setIrLights(channel, true);
+await host.setSpotlight(channel, true, 75);
+await host.setSiren(channel, true, 2);  // ✅ Now working!
+await host.setZoom(channel, 16);
+await host.setFocus(channel, 128);
 
 await host.logout();
 ```
 
-### Status
+See [examples/07-device-control.ts](examples/07-device-control.ts) for a complete working example.
 
-This issue is being investigated. The device control features (IR lights, spotlight, zoom, focus) all work correctly when Baichuan is not initialized.
+---
 
-**Note:** The `setSiren()` method is fully implemented using the Baichuan `AudioAlarmPlay` command (cmd_id 546), but cannot be tested until the Baichuan TCP connection issue is resolved. The implementation follows the Python reference library and should work once the connection bug is fixed.
+## No Known Issues
 
-### Related
+There are currently **no known issues** with the library. All core functionality has been tested and verified working:
 
-- Device control features (HTTP-based) are fully functional
-- Siren control (Baichuan-based) is implemented but untestable
-- HTTP API works correctly
-- Issue is isolated to Baichuan TCP protocol implementation
+- ✅ HTTP API operations
+- ✅ Baichuan TCP protocol
+- ✅ Event subscriptions and monitoring
+- ✅ Device control commands
+- ✅ VOD file search and download
+- ✅ Multi-channel NVR support
+
+If you encounter any issues, please [open an issue on GitHub](https://github.com/verheesj/reolink-aio-ts/issues) with:
+- Device model and firmware version
+- Full error message and stack trace
+- Minimal reproduction code
+- Debug logs (enable with `REOLINK_AIO_DEBUG=1`)

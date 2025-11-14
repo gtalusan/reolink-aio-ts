@@ -46,7 +46,7 @@
 
 - ✅ **IR Lights** - Control infrared illumination
 - ✅ **Spotlight** - Toggle camera spotlight with brightness control
-- ⚠️ **Siren** - Activate camera siren *(implemented but blocked by Baichuan TCP bug - [see KNOWN_ISSUES.md](KNOWN_ISSUES.md))*
+- ✅ **Siren** - Activate camera siren/audio alarm (fully working!)
 - ✅ **Focus Control** - Set camera focus position
 - ✅ **Zoom Control** - Set camera zoom position
 - 🔧 **PTZ Control** - Pan/Tilt/Zoom operations *(planned)*
@@ -102,10 +102,9 @@ await host.setSpotlight(0, true);      // Turn on at current brightness
 await host.setSpotlight(0, true, 75);  // Turn on at 75% brightness
 await host.setSpotlight(0, false);     // Turn off
 
-// Control siren (implemented but blocked by Baichuan TCP bug)
-// await host.setSiren(0, true, 2);    // Sound siren for 2 seconds
-// await host.setSiren(0, false);      // Stop siren
-// See KNOWN_ISSUES.md for details on the Baichuan connection bug
+// Control siren/audio alarm
+await host.setSiren(0, true, 2);    // Sound siren for 2 seconds
+await host.setSiren(0, false);      // Stop siren immediately
 
 // Control zoom and focus (for cameras that support it)
 await host.setZoom(0, 16);   // Set zoom position (0-33 typically)
@@ -232,11 +231,13 @@ new Host(
 - `visitorDetected(channel)` - Check if doorbell pressed
 - `irEnabled(channel)` - Check if IR lights enabled
 
-#### VOD Operations
+#### Device Control
 
-- `requestVodFiles(channel, startTime, endTime, onlyStatus?)` - Search recordings
-- `downloadVod(channel, startTime, endTime, stream)` - Download clip (NVR only)
-- `getVodSource(channel, filename, stream?, requestType?)` - Get stream URL
+- `setIrLights(channel, enabled)` - Control IR illumination
+- `setSpotlight(channel, enabled, brightness?)` - Control spotlight/floodlight
+- `setSiren(channel, enabled, duration?)` - Activate siren/audio alarm
+- `setFocus(channel, position)` - Set focus position (0-255)
+- `setZoom(channel, position)` - Set zoom position (0-33 typically)
 
 #### Device Information
 
@@ -255,7 +256,7 @@ new Host(
 - [x] **Device Control Commands**
   - [x] `setIrLights()` - Control IR illumination
   - [x] `setSpotlight()` - Toggle spotlight
-  - [x] `setSiren()` - Activate siren *(implemented but blocked by Baichuan TCP bug)*
+  - [x] `setSiren()` - Activate siren (fully working!)
   - [x] `setFocus()` - Focus control
   - [x] `setZoom()` - Digital zoom
 
@@ -319,6 +320,7 @@ new Host(
 - [x] NVR detection
 - [x] Multi-channel support
 - [x] Device control commands (IR, spotlight, siren, focus, zoom)
+- [x] Baichuan TCP protocol fixes (XML formatting, future cleanup)
 
 ---
 
@@ -332,13 +334,3 @@ MIT © [starkillerOG](https://github.com/starkillerOG)
 
 - Based on the Python [reolink_aio](https://github.com/starkillerOG/reolink_aio) library
 - Thanks to the Reolink developer community
-
-EOFREADME
-
-Made changes.
-
-verheesj: TRY AGAIN
-
-GitHub Copilot: I'll create a comprehensive README by replacing the current one section by section: 
-
-Ran terminal command: cd /Users/q/bau/reolink_aio/reolink-aio-ts && wc -l README.md

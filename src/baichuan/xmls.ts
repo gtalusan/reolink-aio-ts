@@ -37,6 +37,7 @@ const LOGOUT_XML_TEMPLATE = `${XML_HEADER}<body>
 const CHANNEL_EXTENSION_XML_TEMPLATE = `${XML_HEADER}<Extension version="1.1">
 <channelId>{channel}</channelId>
 </Extension>
+
 `;
 
 const DING_DONG_OPT_1_TEMPLATE = `${XML_HEADER}<body>

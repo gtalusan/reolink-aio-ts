@@ -139,16 +139,24 @@ describe('Host', () => {
       host = new Host('192.168.1.10', 'user', 'password');
     });
 
-    it('should throw NotSupportedError for setIrLights', async () => {
-      await expect(host.setIrLights(0, true)).rejects.toThrow('not yet implemented');
+    it('should throw InvalidParameterError for setIrLights on invalid channel', async () => {
+      await expect(host.setIrLights(99, true)).rejects.toThrow(InvalidParameterError);
     });
 
-    it('should throw NotSupportedError for setSpotlight', async () => {
-      await expect(host.setSpotlight(0, true)).rejects.toThrow('not yet implemented');
+    it('should throw InvalidParameterError for setSpotlight on invalid channel', async () => {
+      await expect(host.setSpotlight(99, true)).rejects.toThrow(InvalidParameterError);
     });
 
-    it('should throw NotSupportedError for setSiren', async () => {
-      await expect(host.setSiren(0, true)).rejects.toThrow('not yet implemented');
+    it('should throw InvalidParameterError for setSiren on invalid channel', async () => {
+      await expect(host.setSiren(99, true)).rejects.toThrow(InvalidParameterError);
+    });
+
+    it('should throw InvalidParameterError for setFocus on invalid channel', async () => {
+      await expect(host.setFocus(99, 128)).rejects.toThrow(InvalidParameterError);
+    });
+
+    it('should throw InvalidParameterError for setZoom on invalid channel', async () => {
+      await expect(host.setZoom(99, 16)).rejects.toThrow(InvalidParameterError);
     });
 
     it('should throw NotSupportedError for subscribe', async () => {

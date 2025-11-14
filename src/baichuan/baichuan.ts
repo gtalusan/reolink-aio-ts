@@ -946,6 +946,49 @@ export class Baichuan {
   }
 
   /**
+   * Play an audio alarm (siren) on the camera
+   * @param channel - Channel number
+   * @param enabled - true to enable siren, false to disable
+   * @param duration - Duration in seconds (default: 2)
+   * @param times - Number of times to play (default: 1, 0 for continuous)
+   */
+  async audioAlarmPlay(channel: number, enabled: boolean = true, duration: number = 2, times: number = 1): Promise<void> {
+    const isHub = this.httpApi["_isHub"] || false;
+    let xml: string;
+
+    if (times === 1) {
+      // Manual mode - play once
+      if (isHub) {
+        xml = xmls.buildSirenHubManualXml({ 
+          enable: enabled ? '1' : '0' 
+        });
+      } else {
+        xml = xmls.buildSirenManualXml({ 
+          channel: channel.toString(),
+          enable: enabled ? '1' : '0' 
+        });
+      }
+    } else {
+      // Times mode - play multiple times
+      if (isHub) {
+        xml = xmls.buildSirenHubTimesXml({ 
+          times: times.toString() 
+        });
+      } else {
+        xml = xmls.buildSirenTimesXml({ 
+          channel: channel.toString(),
+          times: times.toString() 
+        });
+      }
+    }
+
+    // Send the command with cmd_id 546 (AudioAlarmPlay)
+    await this.send(546, channel, xml, "", EncType.AES);
+    
+    debugLog(`Baichuan host ${this.host}: Audio alarm ${enabled ? 'enabled' : 'disabled'} on channel ${channel}`);
+  }
+
+  /**
    * Fetch the host settings/capabilities
    */
   async getHostData(): Promise<void> {

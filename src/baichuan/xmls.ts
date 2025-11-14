@@ -370,5 +370,21 @@ export function buildChannelExtensionXml(params: TemplateParams): string {
   return buildBaichuanXml(CHANNEL_EXTENSION_XML_TEMPLATE, params);
 }
 
+export function buildSirenManualXml(params: TemplateParams): string {
+  return buildBaichuanXml(SIREN_MANUAL_TEMPLATE, params);
+}
+
+export function buildSirenTimesXml(params: TemplateParams): string {
+  return buildBaichuanXml(SIREN_TIMES_TEMPLATE, params);
+}
+
+export function buildSirenHubManualXml(params: TemplateParams): string {
+  return buildBaichuanXml(SIREN_HUB_MANUAL_TEMPLATE, params);
+}
+
+export function buildSirenHubTimesXml(params: TemplateParams): string {
+  return buildBaichuanXml(SIREN_HUB_TIMES_TEMPLATE, params);
+}
+
 export type { TemplateParams as BaichuanTemplateParams };
 

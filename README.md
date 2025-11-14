@@ -44,9 +44,11 @@
 
 ### 🎛️ Device Control
 
-- 🔧 **IR Lights** - Control infrared illumination *(planned)*
-- 🔧 **Spotlight** - Toggle camera spotlight *(planned)*
-- 🔧 **Siren** - Activate camera siren *(planned)*
+- ✅ **IR Lights** - Control infrared illumination
+- ✅ **Spotlight** - Toggle camera spotlight with brightness control
+- ⚠️ **Siren** - Activate camera siren *(implemented but blocked by Baichuan TCP bug - [see KNOWN_ISSUES.md](KNOWN_ISSUES.md))*
+- ✅ **Focus Control** - Set camera focus position
+- ✅ **Zoom Control** - Set camera zoom position
 - 🔧 **PTZ Control** - Pan/Tilt/Zoom operations *(planned)*
 
 ### 📊 Device Information
@@ -81,6 +83,33 @@ await host.getHostData();
 
 console.log(`Connected to: ${host.nvrName}`);
 console.log(`Channels: ${host.channelsValue.length}`);
+```
+
+### Device Control
+
+```typescript
+import { Host } from 'reolink-aio-ts';
+
+const host = new Host('192.168.1.100', 'admin', 'your-password');
+await host.getHostData();
+
+// Control IR lights (Auto mode enables IR, Off disables it)
+await host.setIrLights(0, true);  // Enable IR lights
+await host.setIrLights(0, false); // Disable IR lights
+
+// Control spotlight/floodlight
+await host.setSpotlight(0, true);      // Turn on at current brightness
+await host.setSpotlight(0, true, 75);  // Turn on at 75% brightness
+await host.setSpotlight(0, false);     // Turn off
+
+// Control siren (implemented but blocked by Baichuan TCP bug)
+// await host.setSiren(0, true, 2);    // Sound siren for 2 seconds
+// await host.setSiren(0, false);      // Stop siren
+// See KNOWN_ISSUES.md for details on the Baichuan connection bug
+
+// Control zoom and focus (for cameras that support it)
+await host.setZoom(0, 16);   // Set zoom position (0-33 typically)
+await host.setFocus(0, 128); // Set focus position (0-255 typically)
 ```
 
 ### Real-Time Motion Detection
@@ -153,6 +182,7 @@ The `examples/` directory contains complete, working examples:
 | [04-download-clips.ts](examples/04-download-clips.ts) | Download MP4 clips from NVR | 🟡 Intermediate |
 | [05-event-webhook.ts](examples/05-event-webhook.ts) | Webhook event receiver | 🔴 Advanced |
 | [06-scheduled-backup.ts](examples/06-scheduled-backup.ts) | Automated backup system | 🔴 Advanced |
+| [07-device-control.ts](examples/07-device-control.ts) | Control IR, spotlight, siren, zoom | 🟢 Beginner |
 
 ### Running Examples
 
@@ -222,12 +252,12 @@ new Host(
 
 ### High Priority
 
-- [ ] **Device Control Commands**
-  - [ ] `setIrLights()` - Control IR illumination
-  - [ ] `setSpotlight()` - Toggle spotlight
-  - [ ] `setSiren()` - Activate siren
-  - [ ] `setAutoFocus()` - Focus control
-  - [ ] `setZoom()` - Digital zoom
+- [x] **Device Control Commands**
+  - [x] `setIrLights()` - Control IR illumination
+  - [x] `setSpotlight()` - Toggle spotlight
+  - [x] `setSiren()` - Activate siren *(implemented but blocked by Baichuan TCP bug)*
+  - [x] `setFocus()` - Focus control
+  - [x] `setZoom()` - Digital zoom
 
 - [ ] **PTZ (Pan/Tilt/Zoom)**
   - [ ] `ptzControl()` - Manual PTZ movement
@@ -288,6 +318,7 @@ new Host(
 - [x] Working examples
 - [x] NVR detection
 - [x] Multi-channel support
+- [x] Device control commands (IR, spotlight, siren, focus, zoom)
 
 ---
 

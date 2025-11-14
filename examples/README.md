@@ -135,6 +135,25 @@ Edit the `config` object in the script to customize:
 
 ---
 
+### 07-device-control.ts
+**Device Control**
+
+Demonstrates how to:
+- Control IR lights (infrared illumination)
+- Control spotlight/floodlight with brightness
+- Activate siren with duration *(implemented but blocked by Baichuan TCP bug)*
+- Set zoom and focus positions (for supported cameras)
+- Handle devices that don't support certain features
+
+**Run:**
+```bash
+npx ts-node examples/07-device-control.ts
+```
+
+**Note:** Not all cameras support all features. The example gracefully handles unsupported features. Siren control is implemented but cannot be tested until the Baichuan TCP connection issue is resolved (see [KNOWN_ISSUES.md](../KNOWN_ISSUES.md)).
+
+---
+
 ## Common Patterns
 
 ### Connecting to a Device

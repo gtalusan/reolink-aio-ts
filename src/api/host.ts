@@ -121,13 +121,23 @@ export class Host {
     this.encPassword = encodeURIComponent(this.password);
 
     // Initialize HTTP client with SSL verification disabled (like Python version)
+    // Disable keep-alive to avoid connection reset issues
     const https = require('https');
+    const http = require('http');
     this.httpClient = axios.create({
       timeout: this.timeout * 1000,
       httpsAgent: new https.Agent({
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        keepAlive: false
       }),
-      validateStatus: () => true // Don't throw on HTTP error status
+      httpAgent: new http.Agent({
+        keepAlive: false
+      }),
+      validateStatus: () => true, // Don't throw on HTTP error status
+      maxRedirects: 0,
+      headers: {
+        'Connection': 'close'
+      }
     });
 
     // Initialize Baichuan
@@ -328,26 +338,27 @@ export class Host {
       return;
     }
 
-    for (const channel of this.channels) {
-      const body: ReolinkJson = [];
-      const channelMapping: Array<number> = [];
-      const commands: Array<string> = ["GetEvents", "GetMdState", "GetAiState"];
+    // Build a single request with all commands for all channels
+    const body: ReolinkJson = [];
+    const channelMapping: Array<number> = [];
+    const commands: Array<string> = ["GetEvents", "GetMdState", "GetAiState"];
 
+    for (const channel of this.channels) {
       for (const cmd of commands) {
         body.push({ cmd, action: 0, param: { channel } });
         channelMapping.push(channel);
       }
+    }
 
-      if (body.length === 0) {
-        continue;
-      }
+    if (body.length === 0) {
+      return;
+    }
 
-      try {
-        const jsonData = await this.send(body, null, "json");
-        this.mapChannelJsonResponse(jsonData, channelMapping);
-      } catch (err) {
-        debugLog(`Error refreshing channel ${channel} states: ${err}`);
-      }
+    try {
+      const jsonData = await this.send(body, null, "json");
+      this.mapChannelJsonResponse(jsonData, channelMapping);
+    } catch (err) {
+      debugLog(`Error refreshing states: ${err}`);
     }
   }
 
@@ -765,17 +776,202 @@ export class Host {
     return irSettings?.IrLights?.state === "Auto";
   }
 
-  // State setters (simplified - full implementation needed)
+  /**
+   * Control IR lights on a channel
+   * @param channel - Channel number
+   * @param enabled - true for Auto mode (IR on), false for Off mode
+   */
   async setIrLights(channel: number, enabled: boolean): Promise<void> {
-    throw new NotSupportedError("setIrLights not yet implemented");
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setIrLights: no camera connected to channel '${channel}'`);
+    }
+
+    // Get current settings first
+    if (!this.irSettings.has(channel)) {
+      await this.getChannelData();
+    }
+
+    const currentSettings = this.irSettings.get(channel);
+    if (!currentSettings) {
+      throw new NotSupportedError(`setIrLights: IR lights not supported on channel ${channel}`);
+    }
+
+    const body: ReolinkJson = [
+      {
+        cmd: "SetIrLights",
+        action: 0,
+        param: {
+          IrLights: {
+            channel: channel,
+            state: enabled ? "Auto" : "Off"
+          }
+        }
+      }
+    ];
+
+    const jsonData = await this.send(body, { cmd: "SetIrLights" }, "json");
+    
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setIrLights failed with code ${jsonData[0]?.code || -1}`,
+        "SetIrLights",
+        jsonData[0]?.code || -1
+      );
+    }
+
+    // Update cached state
+    if (this.irSettings.has(channel)) {
+      this.irSettings.get(channel)!.IrLights.state = enabled ? "Auto" : "Off";
+    }
   }
 
-  async setSpotlight(channel: number, enabled: boolean): Promise<void> {
-    throw new NotSupportedError("setSpotlight not yet implemented");
+  /**
+   * Control spotlight/floodlight on a channel
+   * @param channel - Channel number
+   * @param enabled - true to turn on, false to turn off
+   * @param brightness - Optional brightness level (0-100)
+   */
+  async setSpotlight(channel: number, enabled: boolean, brightness?: number): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setSpotlight: no camera connected to channel '${channel}'`);
+    }
+
+    if (brightness !== undefined && (brightness < 0 || brightness > 100)) {
+      throw new InvalidParameterError(`setSpotlight: brightness ${brightness} must be between 0 and 100`);
+    }
+
+    const settings: Record<string, any> = {
+      channel: channel,
+      state: enabled ? 1 : 0
+    };
+
+    if (brightness !== undefined) {
+      settings.bright = brightness;
+    }
+
+    // Note: SetWhiteLed does not use "action" field
+    const body: ReolinkJson = [
+      {
+        cmd: "SetWhiteLed",
+        param: {
+          WhiteLed: settings
+        }
+      }
+    ];
+
+    const jsonData = await this.send(body, { cmd: "SetWhiteLed" }, "json");
+    
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setSpotlight failed with code ${jsonData[0]?.code || -1}`,
+        "SetWhiteLed",
+        jsonData[0]?.code || -1
+      );
+    }
   }
 
-  async setSiren(channel: number, enabled: boolean): Promise<void> {
-    throw new NotSupportedError("setSiren not yet implemented");
+  /**
+   * Control siren on a channel
+   * Uses the Baichuan protocol AudioAlarmPlay command.
+   * 
+   * @param channel - Channel number (optional for NVRs)
+   * @param enabled - true to turn on, false to turn off
+   * @param duration - Duration in seconds (default: 2)
+   * @param times - Number of times to play siren (default: 1, 0 for continuous)
+   */
+  async setSiren(channel: number | null = null, enabled: boolean = true, duration: number = 2, times: number = 1): Promise<void> {
+    // Validate channel if provided and channels are available
+    if (channel !== null && this.channels.length > 0 && !this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setSiren: no camera connected to channel '${channel}'`);
+    }
+
+    // If channel is null, use first available channel (or 0 if channels not loaded yet)
+    const targetChannel = channel !== null ? channel : (this.channels[0] ?? 0);
+    
+    // Use Baichuan protocol to control the siren
+    if (!this.baichuan) {
+      throw new NotSupportedError('setSiren: Baichuan protocol not initialized');
+    }
+
+    await this.baichuan.audioAlarmPlay(targetChannel, enabled, duration, times);
+  }
+
+  /**
+   * Set focus position on a channel
+   * @param channel - Channel number
+   * @param position - Focus position value (typically 0-255, range depends on camera)
+   */
+  async setFocus(channel: number, position: number): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setFocus: no camera connected to channel '${channel}'`);
+    }
+
+    if (!Number.isInteger(position) || position < 0) {
+      throw new InvalidParameterError(`setFocus: position ${position} must be a non-negative integer`);
+    }
+
+    const body: ReolinkJson = [
+      {
+        cmd: "StartZoomFocus",
+        action: 0,
+        param: {
+          ZoomFocus: {
+            channel: channel,
+            op: "FocusPos",
+            pos: position
+          }
+        }
+      }
+    ];
+
+    const jsonData = await this.send(body, null, "json");
+    
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setFocus failed with code ${jsonData[0]?.code || -1}`,
+        "StartZoomFocus",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Set zoom position on a channel
+   * @param channel - Channel number
+   * @param position - Zoom position value (typically 0-33, range depends on camera)
+   */
+  async setZoom(channel: number, position: number): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setZoom: no camera connected to channel '${channel}'`);
+    }
+
+    if (!Number.isInteger(position) || position < 0) {
+      throw new InvalidParameterError(`setZoom: position ${position} must be a non-negative integer`);
+    }
+
+    const body: ReolinkJson = [
+      {
+        cmd: "StartZoomFocus",
+        action: 0,
+        param: {
+          ZoomFocus: {
+            channel: channel,
+            op: "ZoomPos",
+            pos: position
+          }
+        }
+      }
+    ];
+
+    const jsonData = await this.send(body, null, "json");
+    
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setZoom failed with code ${jsonData[0]?.code || -1}`,
+        "StartZoomFocus",
+        jsonData[0]?.code || -1
+      );
+    }
   }
 
   // Subscription methods (simplified)

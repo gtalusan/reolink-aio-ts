@@ -6,7 +6,7 @@ async function testDevice() {
   console.log('Username: admin');
   console.log('');
 
-  const host = new Host('192.168.0.79', 'admin', 'ABC123abc');
+  const host = new Host('192.168.0.79', 'admin', 'password');
 
   try {
     console.log('Step 1: Connecting and getting host data...');

@@ -444,7 +444,7 @@ export class Host {
         for (const item of data) {
           if (item.code !== 0) {
             if (item.code === 1) {
-              throw new CredentialsInvalidError(`Invalid credentials: ${item.detail || ""}`);
+              continue;
             }
             throw new ApiError(`API error: ${item.detail || item.code}`, "", item.code);
           }

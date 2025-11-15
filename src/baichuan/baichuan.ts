@@ -890,12 +890,14 @@ export class Baichuan {
 
               // Parse AI detection states
               if (event.AItype !== undefined) {
-                const aiTypes = String(event.AItype);
+                const aiTypesStr = String(event.AItype);
+                const aiTypesList = aiTypesStr.split(',').map(t => t.trim());
                 const aiStates = this.httpApi._aiDetectionStates.get(channel);
                 
                 if (aiStates) {
                   for (const [aiTypeKey, oldState] of aiStates.entries()) {
-                    const aiState = aiTypes.includes(aiTypeKey);
+                    // Check if aiTypeKey is in the list of AI types
+                    const aiState = aiTypesList.includes(aiTypeKey);
                     if (aiState !== oldState) {
                       debugLog(`Reolink ${this.httpApi.nvrName} TCP event channel ${channel}, ${aiTypeKey}: ${aiState}`);
                     }
@@ -905,8 +907,22 @@ export class Baichuan {
 
                 // Handle "other" AI type for PIR/battery cams
                 const motionState = this.httpApi._motionDetectionStates.get(channel) || false;
-                if (!motionState && aiTypes.includes('other')) {
+                if (!motionState && aiTypesList.includes('other')) {
                   this.httpApi._motionDetectionStates.set(channel, true);
+                }
+
+                // Log unknown AI types (for debugging/discovery)
+                for (const aiType of aiTypesList) {
+                  if (aiType === 'none' || aiType === 'other') {
+                    continue;
+                  }
+                  if (aiStates && !aiStates.has(aiType)) {
+                    const logKey = `TCP_event_unknown_${aiType}`;
+                    if (!this.logOnce.has(logKey)) {
+                      this.logOnce.add(logKey);
+                      debugLog(`Reolink ${this.httpApi.nvrName} TCP event channel ${channel}, received unknown AI event type: ${aiType}`);
+                    }
+                  }
                 }
               }
 

@@ -14,7 +14,40 @@ npm install
 npm run build
 ```
 
-3. Configure your device credentials in each example file (replace `'your_password'` with your actual password).
+3. Configure your device credentials using environment variables (recommended) or edit each example file directly.
+
+## Configuration
+
+### Using Environment Variables (Recommended)
+
+The examples support environment variables for credentials, making it easier to test without modifying code:
+
+1. Copy the `.env.example` file to `.env`:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` with your device credentials:
+```bash
+REOLINK_NVR_HOST=192.168.1.100
+REOLINK_NVR_USER=admin
+REOLINK_NVR_PASS=your_password
+```
+
+3. Run any example - it will automatically use your credentials:
+```bash
+npx tsx examples/01-basic-connection.ts
+```
+
+**Available Environment Variables:**
+- `REOLINK_NVR_HOST` - Camera/NVR IP address (e.g., '192.168.1.100')
+- `REOLINK_NVR_USER` - Username (default: 'admin')
+- `REOLINK_NVR_PASS` - Password
+- `WEBHOOK_URL` - Webhook URL for event notifications (example 05, default: 'http://localhost:3001/webhook')
+
+### Manual Configuration
+
+Alternatively, you can edit the credentials directly in each example file. Look for the `Host` initialization near the top of each file and update the values.
 
 ## Examples
 
@@ -222,7 +255,16 @@ npx tsx examples/10-configuration-management.ts
 ```typescript
 import { Host } from '../src/api/host';
 
-const host = new Host('192.168.0.79', 'admin', 'password');
+// Using environment variables (recommended)
+const host = new Host(
+  process.env.REOLINK_NVR_HOST ?? '192.168.1.100',
+  process.env.REOLINK_NVR_USER ?? 'admin',
+  process.env.REOLINK_NVR_PASS ?? 'your_password'
+);
+
+// Or hardcode values directly
+// const host = new Host('192.168.0.79', 'admin', 'password');
+
 await host.getHostData();
 // ... use host ...
 await host.logout();

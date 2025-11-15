@@ -13,9 +13,9 @@
 import { Host } from '../src';
 
 // Example device configuration
-const DEVICE_IP = '192.168.1.100';
-const USERNAME = 'admin';
-const PASSWORD = 'your-password';
+const DEVICE_IP = process.env.REOLINK_NVR_HOST ?? '192.168.1.100';
+const USERNAME = process.env.REOLINK_NVR_USER ?? 'admin';
+const PASSWORD = process.env.REOLINK_NVR_PASS ?? 'your-password';
 
 async function main() {
   try {

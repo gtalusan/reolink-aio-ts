@@ -13,7 +13,7 @@ import { VODTrigger, VodRequestType } from './src/enums';
 import { VODFile, VODSearchStatus } from './src/types';
 
 async function getEventVideoClips() {
-  const host = new Host('192.168.0.79', 'admin', 'ABC123abc');
+  const host = new Host(process.env.REOLINK_NVR_HOST ?? '192.168.0.79', process.env.REOLINK_NVR_USER ?? 'admin', process.env.REOLINK_NVR_PASS ?? 'ABC123abc');
 
   try {
     // Step 1: Connect and get host data

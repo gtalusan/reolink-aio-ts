@@ -154,6 +154,67 @@ npx tsx examples/07-device-control.ts
 
 ---
 
+### 08-ptz-control.ts
+**PTZ Control**
+
+Demonstrates how to:
+- Control Pan/Tilt/Zoom operations
+- Use PTZ presets and patrols
+- Configure guard positions
+- Set up auto-tracking with limits
+- Calibrate PTZ cameras
+
+**Run:**
+```bash
+npx tsx examples/08-ptz-control.ts
+```
+
+---
+
+### 09-live-streaming.ts
+**Live Streaming**
+
+Demonstrates how to:
+- Get live stream URLs (RTSP, RTMP, FLV)
+- Auto-select the best streaming protocol
+- Switch between main and sub streams
+- Capture snapshots
+- Detect video encoding (H.264/H.265)
+
+**Run:**
+```bash
+npx tsx examples/09-live-streaming.ts
+```
+
+---
+
+### 10-configuration-management.ts
+**Configuration Management**
+
+Demonstrates how to:
+- Get and set OSD (On-Screen Display) settings
+- Configure recording schedules
+- Control motion detection settings and sensitivity
+- Configure AI detection features (person, vehicle, pet detection)
+- Manage notification settings (FTP, Email, Push, Buzzer)
+- Access network configuration
+
+**Run:**
+```bash
+npx tsx examples/10-configuration-management.ts
+```
+
+**Features:**
+- OSD position control (camera name, date/time)
+- Recording enable/disable
+- Motion detection sensitivity adjustment (1-50)
+- AI detection sensitivity (0-100) and delay (0-8 seconds)
+- FTP, Email, Push notification toggle
+- Buzzer alarm control
+- Network port information
+
+---
+
 ## Common Patterns
 
 ### Connecting to a Device

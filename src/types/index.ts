@@ -922,3 +922,239 @@ export interface AutoTrackLimits {
   };
 }
 
+/**
+ * OSD (On-Screen Display) settings
+ */
+export interface OsdSettings {
+  /** OSD configuration */
+  Osd: {
+    /** Channel number */
+    channel?: number;
+    /** Camera name display settings */
+    osdChannel?: {
+      /** Enable camera name display */
+      enable: number;
+      /** Camera name */
+      name: string;
+      /** Position on screen */
+      pos: string;
+    };
+    /** Time/date display settings */
+    osdTime?: {
+      /** Enable time/date display */
+      enable: number;
+      /** Position on screen */
+      pos: string;
+    };
+    /** Watermark/logo enable */
+    watermark?: number;
+  };
+}
+
+/**
+ * Recording schedule settings
+ */
+export interface RecordingSettings {
+  /** Recording configuration */
+  Rec: {
+    /** Channel number */
+    channel?: number;
+    /** Enable recording */
+    enable?: number;
+    /** Schedule enable (V2 API) */
+    scheduleEnable?: number;
+    /** Recording schedule */
+    schedule?: {
+      /** Enable schedule */
+      enable?: number;
+      /** Channel number */
+      channel?: number;
+      /** Table of recording times */
+      table?: string;
+    };
+    /** Pre-record time */
+    preRecord?: string;
+    /** Post-record time */
+    postRec?: string;
+    /** Pack time (file duration) */
+    packTime?: string;
+  };
+}
+
+/**
+ * Motion detection alarm settings
+ */
+export interface MdAlarmSettings {
+  /** Alarm configuration */
+  Alarm?: {
+    /** Channel number */
+    channel?: number;
+    /** Alarm type */
+    type?: string;
+    /** Enable motion detection */
+    enable?: number;
+    /** Sensitivity zones */
+    sens?: Array<{
+      /** Zone ID */
+      id: number;
+      /** Sensitivity value (0-50) */
+      sensitivity: number;
+    }>;
+  };
+  /** Motion detection alarm (V2 API) */
+  MdAlarm?: {
+    /** Channel number */
+    channel?: number;
+    /** Enable motion detection */
+    enable?: number;
+    /** Use new sensitivity format */
+    useNewSens?: number;
+    /** New sensitivity settings */
+    newSens?: {
+      /** Default sensitivity (0-50) */
+      sensDef: number;
+    };
+    /** Sensitivity zones */
+    sens?: Array<{
+      /** Zone ID */
+      id: number;
+      /** Sensitivity value (0-50) */
+      sensitivity: number;
+    }>;
+  };
+}
+
+/**
+ * AI detection alarm settings
+ */
+export interface AiAlarmSettings {
+  /** AI alarm configuration */
+  AiAlarm?: {
+    /** Channel number */
+    channel?: number;
+    /** AI detection type (person, vehicle, dog_cat, etc.) */
+    ai_type?: string;
+    /** Sensitivity (0-100) */
+    sensitivity?: number;
+    /** Stay time / delay (seconds) */
+    stay_time?: number;
+  };
+}
+
+/**
+ * FTP settings
+ */
+export interface FtpSettings {
+  /** FTP configuration */
+  Ftp: {
+    /** Enable FTP */
+    enable?: number;
+    /** Schedule enable (V2 API) */
+    scheduleEnable?: number;
+    /** FTP schedule */
+    schedule?: {
+      /** Enable schedule */
+      enable?: number;
+      /** Channel number */
+      channel?: number;
+      /** Table of FTP upload times */
+      table?: string;
+    };
+  };
+}
+
+/**
+ * Email settings
+ */
+export interface EmailSettings {
+  /** Email configuration */
+  Email: {
+    /** Enable email */
+    enable?: number;
+    /** Schedule enable (V2 API) */
+    scheduleEnable?: number;
+    /** Email schedule */
+    schedule?: {
+      /** Enable schedule */
+      enable?: number;
+      /** Channel number */
+      channel?: number;
+      /** Table of email notification times */
+      table?: string;
+    };
+  };
+}
+
+/**
+ * Push notification settings
+ */
+export interface PushSettings {
+  /** Push notification configuration */
+  Push: {
+    /** Enable push notifications */
+    enable?: number;
+    /** Schedule enable (V2 API) */
+    scheduleEnable?: number;
+    /** Push schedule */
+    schedule?: {
+      /** Enable schedule */
+      enable?: number;
+      /** Channel number */
+      channel?: number;
+      /** Table of push notification times */
+      table?: string;
+    };
+  };
+}
+
+/**
+ * Buzzer alarm settings
+ */
+export interface BuzzerSettings {
+  /** Buzzer configuration */
+  Buzzer: {
+    /** Enable buzzer */
+    enable?: number;
+    /** Schedule enable */
+    scheduleEnable?: number;
+    /** Buzzer schedule */
+    schedule?: {
+      /** Enable schedule */
+      enable?: number;
+      /** Channel number */
+      channel?: number;
+      /** Table of buzzer alarm times */
+      table?: string;
+    };
+  };
+}
+
+/**
+ * Network port settings
+ */
+export interface NetPortSettings {
+  /** Network port configuration */
+  NetPort: {
+    /** HTTP port */
+    httpPort?: number;
+    /** HTTPS port */
+    httpsPort?: number;
+    /** ONVIF port */
+    onvifPort?: number;
+    /** RTMP port */
+    rtmpPort?: number;
+    /** RTSP port */
+    rtspPort?: number;
+    /** HTTP enable */
+    httpEnable?: number;
+    /** HTTPS enable */
+    httpsEnable?: number;
+    /** ONVIF enable */
+    onvifEnable?: number;
+    /** RTMP enable */
+    rtmpEnable?: number;
+    /** RTSP enable */
+    rtspEnable?: number;
+  };
+}
+

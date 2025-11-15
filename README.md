@@ -43,7 +43,7 @@ This project implements Reolink’s private Baichuan API — the same API used b
 - ✅ **Video Download** - Download MP4 clips from NVR/cameras
 - ✅ **Multiple Streams** - Support for main and sub streams
 - ✅ **Stream URLs** - Generate FLV, RTMP, and RTSP URLs
-- 🔧 **Snapshot Capture** - Get still images from cameras *(planned)*
+- ✅ **Snapshot Capture** - Get still images from cameras
 
 ### 🎛️ Device Control
 
@@ -195,6 +195,7 @@ The `examples/` directory contains complete, working examples:
 | [06-scheduled-backup.ts](examples/06-scheduled-backup.ts) | Automated backup system | 🔴 Advanced |
 | [07-device-control.ts](examples/07-device-control.ts) | Control IR, spotlight, siren, zoom | 🟢 Beginner |
 | [08-ptz-control.ts](examples/08-ptz-control.ts) | PTZ movement, presets, patrols, tracking | 🟡 Intermediate |
+| [09-live-streaming.ts](examples/09-live-streaming.ts) | Live stream URLs, snapshots, encoding | 🟢 Beginner |
 
 ### Running Examples
 
@@ -273,6 +274,38 @@ new Host(
 - `getAutoTrackLimitRight(channel)` - Get right limit
 - `setAutoTrackLimit(channel, left?, right?)` - Set tracking limits
 
+#### Configuration Management
+
+- `getOsdSettings(channel)` - Get OSD (On-Screen Display) settings
+- `setOsd(channel, namePos?, datePos?, enableWaterMark?)` - Set OSD parameters
+- `getRecordingSettings(channel)` - Get recording settings
+- `setRecording(channel, enable)` - Enable/disable recording
+- `getMdAlarmSettings(channel)` - Get motion detection settings
+- `setMotionDetection(channel, enable)` - Enable/disable motion detection
+- `setMdSensitivity(channel, value)` - Set motion detection sensitivity (1-50)
+- `getAiAlarmSettings(channel, aiType?)` - Get AI detection settings
+- `setAiSensitivity(channel, value, aiType)` - Set AI detection sensitivity (0-100)
+- `setAiDelay(channel, value, aiType)` - Set AI detection delay (0-8 seconds)
+- `getFtpSettings(channel)` - Get FTP settings
+- `setFtp(channel, enable)` - Enable/disable FTP upload
+- `getEmailSettings(channel)` - Get email settings
+- `setEmail(channel, enable)` - Enable/disable email notifications
+- `getPushSettings(channel)` - Get push notification settings
+- `setPush(channel, enable)` - Enable/disable push notifications
+- `getBuzzerSettings(channel)` - Get buzzer alarm settings
+- `setBuzzer(channel, enable)` - Enable/disable buzzer alarm
+- `getNetworkSettings()` - Get network port settings
+
+#### Streaming Methods
+
+- `getStreamSource(channel, stream?, check?)` - Get live stream URL (auto-selects protocol)
+- `getRtspStreamSource(channel, stream?, check?)` - Get RTSP stream URL
+- `getRtmpStreamSource(channel, stream?)` - Get RTMP stream URL
+- `getFlvStreamSource(channel, stream?)` - Get FLV stream URL
+- `getSnapshot(channel, stream?)` - Capture still image/snapshot
+- `getEncoding(channel, stream?)` - Get video encoding (h264/h265)
+- `encoding(channel, stream?)` - Get cached encoding
+
 #### Device Information
 
 - `nvrName` - Device name
@@ -303,27 +336,33 @@ new Host(
   - [x] `setAutoTracking()` - Auto-tracking configuration
   - [x] Position getters and patrol management
 
-- [ ] **Video Streaming**
-  - [ ] Live stream helpers
-  - [ ] Stream quality switching
-  - [ ] Multi-stream support
+- [x] **Video Streaming**
+  - [x] `getStreamSource()` - Get live stream URL
+  - [x] `getRtspStreamSource()` - RTSP URLs
+  - [x] `getRtmpStreamSource()` - RTMP URLs  
+  - [x] `getFlvStreamSource()` - FLV URLs
+  - [x] `getSnapshot()` - Still image capture
+  - [x] `getEncoding()` - Detect video encoding
+  - [x] Stream quality switching
+  - [x] Multi-stream support
 
 ### Medium Priority
 
 - [ ] **Advanced Features**
   - [ ] `subscribe()` - Webhook subscriptions
-  - [ ] `getSnapshot()` - Still images
   - [ ] Privacy mode detection
   - [ ] Audio support (two-way)
-  - [ ] FTP configuration
-  - [ ] Email notifications
 
-- [ ] **Configuration Management**
-  - [ ] Get/Set OSD settings
-  - [ ] Get/Set recording schedules
-  - [ ] Get/Set motion zones
-  - [ ] Get/Set AI settings
-  - [ ] Network configuration
+- [x] **Configuration Management**
+  - [x] Get/Set OSD settings
+  - [x] Get/Set recording schedules
+  - [x] Get/Set motion detection settings and sensitivity
+  - [x] Get/Set AI detection settings, sensitivity, and delay
+  - [x] Get/Set FTP configuration
+  - [x] Get/Set email notifications
+  - [x] Get/Set push notifications
+  - [x] Get/Set buzzer alarm
+  - [x] Get network configuration
 
 ### Low Priority
 
@@ -358,6 +397,9 @@ new Host(
 - [x] Multi-channel support
 - [x] Device control commands (IR, spotlight, siren, focus, zoom)
 - [x] PTZ control (movement, presets, patrols, guard, auto-tracking)
+- [x] Live streaming (RTSP, RTMP, FLV URLs)
+- [x] Snapshot capture
+- [x] Video encoding detection
 - [x] Baichuan TCP protocol fixes (XML formatting, future cleanup)
 
 ---

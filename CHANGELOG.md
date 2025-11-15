@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-alpha.2] - 2025-11-XX
+
+### Added
+
+#### Live Video Streaming - Complete Implementation
+
+- **Stream URL Generation** - Get live stream URLs for all protocols
+  - `getStreamSource(channel, stream?, check?)` - Main dispatcher method
+  - `getRtspStreamSource(channel, stream?, check?)` - RTSP URL generation with encoding detection
+  - `getRtmpStreamSource(channel, stream?)` - RTMP URLs with password/token authentication
+  - `getFlvStreamSource(channel, stream?)` - FLV URLs over HTTP/HTTPS
+- **Snapshot Capture** - `getSnapshot(channel, stream?)` - Capture still images from cameras
+- **Video Encoding Detection**:
+  - `getEncoding(channel, stream?)` - Async encoding detection (h264/h265)
+  - `encoding(channel, stream?)` - Cached encoding getter
+- **Stream Quality Support**:
+  - Main and sub stream support
+  - Autotrack stream support (`autotrack_sub`, `autotrack_main`)
+  - Telephoto stream support (`telephoto_sub`, `telephoto_main`)
+- **Authentication Methods**:
+  - RTSP: URL-encoded password authentication
+  - RTMP: Password or token authentication
+  - FLV: Password authentication over HTTP/HTTPS
+- **Protocol Features**:
+  - Auto-detection of encoding (h264/h265) for RTSP URLs
+  - Stream type numeric mapping (0=main, 1=sub, 2/3=autotrack/telephoto)
+  - Port auto-detection via GetNetPort command
+  - Privacy mode awareness
+
+#### Testing & Examples
+
+- Added 46 comprehensive streaming unit tests (all passing)
+- Created live streaming example (`examples/09-live-streaming.ts`)
+- Updated README with streaming features and API reference
+
+### Technical Improvements
+
+- Added `encSettings` Map for caching encoding settings
+- Added `encPassword` property for URL-encoded RTSP authentication
+- Extended `send()` method to support binary responses (image/jpeg)
+- Added GetEnc command parsing in channel data responses
+
 ## [0.1.0-alpha.1] - 2025-01-XX
 
 ### Added
@@ -113,6 +155,4 @@ This is the first pre-release of `reolink-aio` - a TypeScript implementation of 
 - Requires Node.js 18+
 - TypeScript 5.3+
 
-[Unreleased]: https://github.com/verheesj/reolink-aio-ts/compare/v0.1.0-alpha.1...HEAD
-[0.1.0-alpha.1]: https://github.com/verheesj/reolink-aio-ts/compare/v0.1.0-alpha.0...v0.1.0-alpha.1
-[0.1.0-alpha.0]: https://github.com/verheesj/reolink-aio-ts/releases/tag/v0.1.0-alpha.0
+[Unreleased]: https://github.com/verheesj/reolink-aio-ts/compare/v0.1.0-alpha.2...HEAD\n[0.1.0-alpha.2]: https://github.com/verheesj/reolink-aio-ts/compare/v0.1.0-alpha.1...v0.1.0-alpha.2\n[0.1.0-alpha.1]: https://github.com/verheesj/reolink-aio-ts/compare/v0.1.0-alpha.0...v0.1.0-alpha.1\n[0.1.0-alpha.0]: https://github.com/verheesj/reolink-aio-ts/releases/tag/v0.1.0-alpha.0

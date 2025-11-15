@@ -15,7 +15,24 @@ import {
 } from "../exceptions";
 import { VodRequestType, PtzEnum, GuardEnum, TrackMethodEnum } from "../enums";
 import { datetimeToReolinkTime } from "../utils";
-import type { ReolinkJson, PtzPresetsResponse, PtzPatrolsResponse, PtzGuardResponse, PtzCurPosResponse, AutoTrackSettings, AutoTrackLimits } from "../types";
+import type { 
+  ReolinkJson, 
+  PtzPresetsResponse, 
+  PtzPatrolsResponse, 
+  PtzGuardResponse, 
+  PtzCurPosResponse, 
+  AutoTrackSettings, 
+  AutoTrackLimits,
+  OsdSettings,
+  RecordingSettings,
+  MdAlarmSettings,
+  AiAlarmSettings,
+  FtpSettings,
+  EmailSettings,
+  PushSettings,
+  BuzzerSettings,
+  NetPortSettings
+} from "../types";
 import { VODFile, VODSearchStatus } from "../types";
 
 const DEBUG_ENABLED = Boolean(process?.env?.REOLINK_AIO_DEBUG);
@@ -49,6 +66,8 @@ export class Host {
   // Private properties
   private url: string = "";
   private rtspPort: number | null = null;
+  private encSettings: Map<number, any> = new Map();
+  private encPassword: string;
   private rtmpPort: number | null = null;
   private onvifPort: number | null = null;
   private rtspEnabled: boolean | null = null;
@@ -57,7 +76,6 @@ export class Host {
   private macAddress: string | null = null;
 
   // Login session
-  private encPassword: string;
   private token: string | null = null;
   private leaseTime: Date | null = null;
   private httpClient: AxiosInstance;
@@ -100,6 +118,18 @@ export class Host {
   private autoTrackSettings: Map<number, any> = new Map();
   private autoTrackLimits: Map<number, any> = new Map();
 
+  // Configuration settings
+  private osdSettings: Map<number, any> = new Map();
+  private recordingSettings: Map<number, any> = new Map();
+  private recordingRange: Map<number, any> = new Map();
+  private mdAlarmSettings: Map<number, any> = new Map();
+  private aiAlarmSettings: Map<number, Map<string, any>> = new Map();
+  private ftpSettings: Map<number, any> = new Map();
+  private emailSettings: Map<number, any> = new Map();
+  private pushSettings: Map<number, any> = new Map();
+  private buzzerSettings: Map<number, any> = new Map();
+  private netportSettings: any = null;
+
   // Mutexes for async operations
   private sendMutex: Promise<void> = Promise.resolve();
   private loginMutex: Promise<void> = Promise.resolve();
@@ -120,6 +150,7 @@ export class Host {
     this.host = host;
     this.username = username;
     this.password = password;
+    this.encPassword = encodeURIComponent(password);
     this.port = port;
     this.useHttps = useHttps;
     this.protocol = protocol;
@@ -127,8 +158,6 @@ export class Host {
     this.timeout = timeout;
     this.rtmpAuthMethod = rtmpAuthMethod;
     this.baichuanOnly = bcOnly;
-
-    this.encPassword = encodeURIComponent(this.password);
 
     // Initialize HTTP client with SSL verification disabled (like Python version)
     // Disable keep-alive to avoid connection reset issues
@@ -229,7 +258,14 @@ export class Host {
         { cmd: "GetPtzGuard", action: 0, param: { channel: channel } },
         { cmd: "GetPtzCurPos", action: 0, param: { PtzCurPos: { channel: channel } } },
         { cmd: "GetAiCfg", action: 0, param: { channel: channel } },
-        { cmd: "GetPtzTraceSection", action: 0, param: { PtzTraceSection: { channel: channel } } }
+        { cmd: "GetPtzTraceSection", action: 0, param: { PtzTraceSection: { channel: channel } } },
+        { cmd: "GetAlarm", action: 0, param: { Alarm: { channel: channel, type: "md" } } },
+        { cmd: "GetMdAlarm", action: 0, param: { channel: channel } },
+        { cmd: "GetRecV20", action: 0, param: { channel: channel } },
+        { cmd: "GetFtpV20", action: 0, param: { channel: channel } },
+        { cmd: "GetEmailV20", action: 0, param: { channel: channel } },
+        { cmd: "GetPushV20", action: 0, param: { channel: channel } },
+        { cmd: "GetBuzzerAlarmV20", action: 0, param: { channel: channel } }
       ];
 
       body.push(...chBody);
@@ -264,7 +300,8 @@ export class Host {
       const channel = channelMapping[i];
 
       if (data.code !== 0) {
-        // Skip error responses
+        // Skip error responses - command not supported or failed
+        debugLog(`Command ${data.cmd} on channel ${channel} failed with code ${data.code}`);
         continue;
       }
 
@@ -332,10 +369,29 @@ export class Host {
         } else if (data.cmd === "GetIrLights" && data.value) {
           this.irSettings.set(channel, data.value);
         } else if (data.cmd === "GetOsd" && data.value && data.value.Osd) {
+          this.osdSettings.set(channel, data.value);
           const osd = data.value.Osd;
           if (osd.osdChannel && osd.osdChannel.name) {
             this.name.set(channel, osd.osdChannel.name);
           }
+        } else if (data.cmd === "GetAlarm" && data.value) {
+          // GetAlarm response - merge with existing settings or create new
+          const existing = this.mdAlarmSettings.get(channel) || {};
+          this.mdAlarmSettings.set(channel, { ...existing, ...data.value });
+        } else if (data.cmd === "GetMdAlarm" && data.value) {
+          // GetMdAlarm response - merge with existing settings or create new
+          const existing = this.mdAlarmSettings.get(channel) || {};
+          this.mdAlarmSettings.set(channel, { ...existing, ...data.value });
+        } else if (data.cmd === "GetRecV20" && data.value) {
+          this.recordingSettings.set(channel, data.value);
+        } else if (data.cmd === "GetFtpV20" && data.value) {
+          this.ftpSettings.set(channel, data.value);
+        } else if (data.cmd === "GetEmailV20" && data.value) {
+          this.emailSettings.set(channel, data.value);
+        } else if (data.cmd === "GetPushV20" && data.value) {
+          this.pushSettings.set(channel, data.value);
+        } else if (data.cmd === "GetBuzzerAlarmV20" && data.value) {
+          this.buzzerSettings.set(channel, data.value);
         } else if (data.cmd === "GetPtzPreset" && data.value) {
           this.ptzPresetsSettings.set(channel, data.value);
           const presets: Record<string, number> = {};
@@ -415,7 +471,7 @@ export class Host {
   private async send(
     body: ReolinkJson,
     param: Record<string, any> | null = null,
-    expectedResponseType: "json" = "json"
+    expectedResponseType: "json" | "image/jpeg" = "json"
   ): Promise<any> {
     // Acquire send mutex
     await this.sendMutex;
@@ -440,8 +496,14 @@ export class Host {
         param.token = this.token;
       }
 
+      // Configure response type for binary data
+      const config: any = { params: param };
+      if (expectedResponseType === "image/jpeg") {
+        config.responseType = "arraybuffer";
+      }
+
       // Use POST with JSON body (like Python version)
-      const response = await this.httpClient.post(url, body, { params: param });
+      const response = await this.httpClient.post(url, body, config);
 
       if (response.status === 300) {
         throw new ApiError(
@@ -453,6 +515,14 @@ export class Host {
 
       if (response.status >= 400) {
         throw new ApiError(`API returned HTTP status ERROR code ${response.status}`, "", response.status);
+      }
+
+      // Handle binary responses (images)
+      if (expectedResponseType === "image/jpeg") {
+        if (response.data instanceof ArrayBuffer) {
+          return Buffer.from(response.data);
+        }
+        return response.data;
       }
 
       // Parse response
@@ -487,13 +557,19 @@ export class Host {
       }
 
       if (Array.isArray(data) && data.length > 0) {
-        // Check for error codes
-        for (const item of data) {
+        // Check for critical errors only in single-command requests
+        // For batch requests, let caller handle individual error codes
+        if (data.length === 1) {
+          const item = data[0];
           if (item.code !== 0) {
-            if (item.code === 1) {
+            // Code 1 can mean "ability error" (not supported) or invalid credentials
+            // Only throw credentials error during login, otherwise return the response
+            // and let the caller decide how to handle it
+            if (item.code === 1 && item.cmd === "Login") {
               throw new CredentialsInvalidError(`Invalid credentials: ${item.detail || ""}`);
             }
-            throw new ApiError(`API error: ${item.detail || item.code}`, "", item.code);
+            // For other commands, return the error response and let caller handle it
+            // Don't throw here - the caller will check the code
           }
         }
         return data;
@@ -673,6 +749,8 @@ export class Host {
                        ['NVR', 'WIFI_NVR', 'HOMEHUB'].includes(type);
         }
       } else if (item.cmd === "GetNetPort" && item.value) {
+        // Store full NetPort settings
+        this.netportSettings = item.value;
         const netPort = item.value.NetPort;
         if (netPort) {
           this.rtspPort = netPort.rtspPort || null;
@@ -1558,6 +1636,752 @@ export class Host {
         "SetPtzTraceSection",
         jsonData[0]?.code || -1
       );
+    }
+  }
+
+  // ========== Configuration Management Methods ==========
+
+  /**
+   * Get OSD settings for a channel
+   * @param channel - Channel number
+   * @returns OSD settings or null if not available
+   */
+  getOsdSettings(channel: number): OsdSettings | null {
+    return this.osdSettings.get(channel) || null;
+  }
+
+  /**
+   * Set OSD parameters
+   * @param channel - Channel number
+   * @param namePos - Position of camera name ("Off" to disable, or position string like "Upper Left")
+   * @param datePos - Position of date/time ("Off" to disable, or position string)
+   * @param enableWaterMark - Enable/disable watermark/logo
+   */
+  async setOsd(
+    channel: number,
+    namePos?: string,
+    datePos?: string,
+    enableWaterMark?: boolean
+  ): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setOsd: no camera connected to channel '${channel}'`);
+    }
+
+    const osdSettings = this.osdSettings.get(channel);
+    if (!osdSettings) {
+      throw new NotSupportedError(`setOsd: OSD on camera ${this.cameraName(channel)} is not available`);
+    }
+
+    const body: ReolinkJson = [{ cmd: "SetOsd", action: 0, param: osdSettings }];
+
+    if (namePos !== undefined) {
+      if (namePos === "Off") {
+        body[0].param.Osd.osdChannel.enable = 0;
+      } else {
+        body[0].param.Osd.osdChannel.enable = 1;
+        body[0].param.Osd.osdChannel.pos = namePos;
+      }
+    }
+
+    if (datePos !== undefined) {
+      if (datePos === "Off") {
+        body[0].param.Osd.osdTime.enable = 0;
+      } else {
+        body[0].param.Osd.osdTime.enable = 1;
+        body[0].param.Osd.osdTime.pos = datePos;
+      }
+    }
+
+    if (enableWaterMark !== undefined && body[0].param.Osd.watermark !== undefined) {
+      body[0].param.Osd.watermark = enableWaterMark ? 1 : 0;
+    }
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setOsd failed with code ${jsonData[0]?.code || -1}`,
+        "SetOsd",
+        jsonData[0]?.code || -1
+      );
+    }
+
+    // Refresh OSD settings
+    this.osdSettings.set(channel, body[0].param);
+  }
+
+  /**
+   * Get recording settings for a channel
+   * @param channel - Channel number
+   * @returns Recording settings or null if not available
+   */
+  getRecordingSettings(channel: number): RecordingSettings | null {
+    return this.recordingSettings.get(channel) || null;
+  }
+
+  /**
+   * Set recording enable/disable
+   * @param channel - Channel number
+   * @param enable - Enable or disable recording
+   */
+  async setRecording(channel: number, enable: boolean): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setRecording: no camera connected to channel '${channel}'`);
+    }
+
+    const settings = this.recordingSettings.get(channel);
+    if (!settings) {
+      throw new NotSupportedError(`setRecording: recording on camera ${this.cameraName(channel)} is not available`);
+    }
+
+    const params = JSON.parse(JSON.stringify(settings)); // Deep copy
+    params.Rec.scheduleEnable = enable ? 1 : 0;
+
+    const body: ReolinkJson = [{ cmd: "SetRecV20", action: 0, param: params }];
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setRecording failed with code ${jsonData[0]?.code || -1}`,
+        "SetRecV20",
+        jsonData[0]?.code || -1
+      );
+    }
+
+    // Update cached settings
+    this.recordingSettings.set(channel, params);
+  }
+
+  /**
+   * Get motion detection alarm settings for a channel
+   * @param channel - Channel number
+   * @returns Motion detection settings or null if not available
+   */
+  getMdAlarmSettings(channel: number): MdAlarmSettings | null {
+    return this.mdAlarmSettings.get(channel) || null;
+  }
+
+  /**
+   * Set motion detection enable/disable
+   * Note: This only works on older cameras that support the GetAlarm/SetAlarm API.
+   * Newer cameras with only GetMdAlarm support use schedule-based enable/disable.
+   * @param channel - Channel number
+   * @param enable - Enable or disable motion detection
+   */
+  async setMotionDetection(channel: number, enable: boolean): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setMotionDetection: no camera connected to channel '${channel}'`);
+    }
+
+    const settings = this.mdAlarmSettings.get(channel);
+    if (!settings || !settings.Alarm) {
+      throw new NotSupportedError(
+        `setMotionDetection: not supported on camera ${this.cameraName(channel)}. ` +
+        `This camera uses the newer API which requires schedule-based configuration.`
+      );
+    }
+
+    // Use SetAlarm command with Alarm parameter (older API)
+    const body: ReolinkJson = [{ cmd: "SetAlarm", action: 0, param: settings }];
+    
+    body[0].param.Alarm.enable = enable ? 1 : 0;
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setMotionDetection failed with code ${jsonData[0]?.code || -1}`,
+        "SetAlarm",
+        jsonData[0]?.code || -1
+      );
+    }
+
+    // Update cached settings
+    this.mdAlarmSettings.set(channel, body[0].param);
+  }
+
+  /**
+   * Set motion detection sensitivity
+   * @param channel - Channel number
+   * @param value - Sensitivity value (1-50, where 1 is least sensitive)
+   */
+  async setMdSensitivity(channel: number, value: number): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setMdSensitivity: no camera connected to channel '${channel}'`);
+    }
+
+    const settings = this.mdAlarmSettings.get(channel);
+    if (!settings) {
+      throw new NotSupportedError(`setMdSensitivity: motion detection sensitivity on camera ${this.cameraName(channel)} is not available`);
+    }
+
+    if (!Number.isInteger(value)) {
+      throw new InvalidParameterError(`setMdSensitivity: sensitivity '${value}' is not an integer`);
+    }
+
+    if (value < 1 || value > 50) {
+      throw new InvalidParameterError(`setMdSensitivity: sensitivity ${value} not in range 1...50`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetMdAlarm",
+      action: 0,
+      param: {
+        MdAlarm: {
+          channel: channel,
+          useNewSens: 1,
+          newSens: { sensDef: 51 - value }
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setMdSensitivity failed with code ${jsonData[0]?.code || -1}`,
+        "SetMdAlarm",
+        jsonData[0]?.code || -1
+      );
+    }
+
+    // Refresh settings
+    const refreshBody: ReolinkJson = [{ cmd: "GetMdAlarm", action: 0, param: { channel } }];
+    const refreshData = await this.send(refreshBody, null, "json");
+    if (refreshData[0]?.code === 0 && refreshData[0].value) {
+      this.mdAlarmSettings.set(channel, refreshData[0].value);
+    }
+  }
+
+  /**
+   * Get AI detection alarm settings for a channel
+   * @param channel - Channel number
+   * @param aiType - AI detection type (person, vehicle, dog_cat, etc.)
+   * @returns AI alarm settings or null if not available
+   */
+  getAiAlarmSettings(channel: number, aiType?: string): Map<string, any> | any | null {
+    const channelSettings = this.aiAlarmSettings.get(channel);
+    if (!channelSettings) {
+      return null;
+    }
+    if (aiType) {
+      return channelSettings.get(aiType) || null;
+    }
+    return channelSettings;
+  }
+
+  /**
+   * Set AI detection sensitivity
+   * @param channel - Channel number
+   * @param value - Sensitivity value (0-100)
+   * @param aiType - AI detection type (person, vehicle, dog_cat, etc.)
+   */
+  async setAiSensitivity(channel: number, value: number, aiType: string): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setAiSensitivity: no camera connected to channel '${channel}'`);
+    }
+
+    if (!Number.isInteger(value)) {
+      throw new InvalidParameterError(`setAiSensitivity: sensitivity '${value}' is not an integer`);
+    }
+
+    if (value < 0 || value > 100) {
+      throw new InvalidParameterError(`setAiSensitivity: sensitivity ${value} not in range 0...100`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetAiAlarm",
+      action: 0,
+      param: {
+        AiAlarm: {
+          channel: channel,
+          ai_type: aiType,
+          sensitivity: value
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setAiSensitivity failed with code ${jsonData[0]?.code || -1}`,
+        "SetAiAlarm",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Set AI detection delay time
+   * @param channel - Channel number
+   * @param value - Delay time in seconds (0-8)
+   * @param aiType - AI detection type (person, vehicle, dog_cat, etc.)
+   */
+  async setAiDelay(channel: number, value: number, aiType: string): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setAiDelay: no camera connected to channel '${channel}'`);
+    }
+
+    if (!Number.isInteger(value)) {
+      throw new InvalidParameterError(`setAiDelay: delay '${value}' is not an integer`);
+    }
+
+    if (value < 0 || value > 8) {
+      throw new InvalidParameterError(`setAiDelay: delay ${value} not in range 0...8`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetAiAlarm",
+      action: 0,
+      param: {
+        AiAlarm: {
+          channel: channel,
+          ai_type: aiType,
+          stay_time: value
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setAiDelay failed with code ${jsonData[0]?.code || -1}`,
+        "SetAiAlarm",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Get FTP settings for a channel
+   * @param channel - Channel number
+   * @returns FTP settings or null if not available
+   */
+  getFtpSettings(channel: number): FtpSettings | null {
+    return this.ftpSettings.get(channel) || null;
+  }
+
+  /**
+   * Set FTP enable/disable
+   * @param channel - Channel number
+   * @param enable - Enable or disable FTP
+   */
+  async setFtp(channel: number, enable: boolean): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setFtp: no camera connected to channel '${channel}'`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetFtpV20",
+      action: 0,
+      param: {
+        Ftp: {
+          scheduleEnable: enable ? 1 : 0,
+          schedule: { channel: channel }
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setFtp failed with code ${jsonData[0]?.code || -1}`,
+        "SetFtpV20",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Get email settings for a channel
+   * @param channel - Channel number
+   * @returns Email settings or null if not available
+   */
+  getEmailSettings(channel: number): EmailSettings | null {
+    return this.emailSettings.get(channel) || null;
+  }
+
+  /**
+   * Set email notifications enable/disable
+   * @param channel - Channel number
+   * @param enable - Enable or disable email notifications
+   */
+  async setEmail(channel: number, enable: boolean): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setEmail: no camera connected to channel '${channel}'`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetEmailV20",
+      action: 0,
+      param: {
+        Email: {
+          scheduleEnable: enable ? 1 : 0,
+          schedule: { channel: channel }
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setEmail failed with code ${jsonData[0]?.code || -1}`,
+        "SetEmailV20",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Get push notification settings for a channel
+   * @param channel - Channel number
+   * @returns Push notification settings or null if not available
+   */
+  getPushSettings(channel: number): PushSettings | null {
+    return this.pushSettings.get(channel) || null;
+  }
+
+  /**
+   * Set push notifications enable/disable
+   * @param channel - Channel number
+   * @param enable - Enable or disable push notifications
+   */
+  async setPush(channel: number, enable: boolean): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setPush: no camera connected to channel '${channel}'`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetPushV20",
+      action: 0,
+      param: {
+        Push: {
+          scheduleEnable: enable ? 1 : 0,
+          schedule: { channel: channel }
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setPush failed with code ${jsonData[0]?.code || -1}`,
+        "SetPushV20",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Get buzzer alarm settings for a channel
+   * @param channel - Channel number
+   * @returns Buzzer settings or null if not available
+   */
+  getBuzzerSettings(channel: number): BuzzerSettings | null {
+    return this.buzzerSettings.get(channel) || null;
+  }
+
+  /**
+   * Set buzzer alarm enable/disable
+   * @param channel - Channel number
+   * @param enable - Enable or disable buzzer alarm
+   */
+  async setBuzzer(channel: number, enable: boolean): Promise<void> {
+    if (!this.channels.includes(channel)) {
+      throw new InvalidParameterError(`setBuzzer: no camera connected to channel '${channel}'`);
+    }
+
+    const body: ReolinkJson = [{
+      cmd: "SetBuzzerAlarmV20",
+      action: 0,
+      param: {
+        Buzzer: {
+          scheduleEnable: enable ? 1 : 0,
+          schedule: { channel: channel }
+        }
+      }
+    }];
+
+    const jsonData = await this.send(body, null, "json");
+
+    if (jsonData[0]?.code !== 0) {
+      throw new ApiError(
+        `setBuzzer failed with code ${jsonData[0]?.code || -1}`,
+        "SetBuzzerAlarmV20",
+        jsonData[0]?.code || -1
+      );
+    }
+  }
+
+  /**
+   * Get network port settings
+   * @returns Network port settings or null if not available
+   */
+  getNetworkSettings(): NetPortSettings | null {
+    return this.netportSettings;
+  }
+
+  // ========== Video Streaming Methods ==========
+
+  /**
+   * Get live stream URL based on configured protocol
+   * @param channel - Channel number
+   * @param stream - Stream type (main/sub/autotrack_sub/etc)
+   * @param check - Whether to validate RTSP URLs (default: true)
+   * @returns Stream URL or null
+   */
+  async getStreamSource(channel: number, stream?: string, check: boolean = true): Promise<string | null> {
+    // Try login, but continue on privacy mode or login errors
+    try {
+      await this.login();
+    } catch (err) {
+      if (!(err instanceof LoginPrivacyModeError) && !(err instanceof LoginError)) {
+        throw err;
+      }
+    }
+
+    const streamType = stream ?? this.stream;
+
+    // Validate stream type
+    const validStreams = ["main", "sub", "ext", "autotrack_sub", "autotrack_main", "telephoto_sub", "telephoto_main"];
+    if (!validStreams.includes(streamType)) {
+      return null;
+    }
+
+    // Route to protocol-specific method
+    if (this.protocol === "rtmp" && !this.baichuanOnly) {
+      return this.getRtmpStreamSource(channel, streamType);
+    }
+    if ((this.protocol === "flv" || streamType === "autotrack_sub" || streamType === "telephoto_sub") && !this.baichuanOnly) {
+      return this.getFlvStreamSource(channel, streamType);
+    }
+    if (this.protocol === "rtsp" || this.baichuanOnly) {
+      return await this.getRtspStreamSource(channel, streamType, check);
+    }
+
+    return null;
+  }
+
+  /**
+   * Get RTSP stream URL
+   * @param channel - Channel number
+   * @param stream - Stream type (defaults to this.stream)
+   * @param check - Whether to validate URL (default: true)
+   * @returns RTSP URL or null
+   */
+  async getRtspStreamSource(channel: number, stream?: string, check: boolean = true): Promise<string | null> {
+    // Check if channel has streaming capability
+    const validChannels = this.streamChannels.length > 0 ? this.streamChannels : this.channels;
+    if (!validChannels.includes(channel)) {
+      return null;
+    }
+
+    const streamType = stream ?? this.stream;
+
+    // Map autotrack_main/telephoto_main to autotrack
+    let effectiveStream = streamType;
+    if (streamType === "autotrack_main" || streamType === "telephoto_main") {
+      effectiveStream = "autotrack";
+    }
+
+    // Format channel as 2-digit padded (channel+1)
+    const channelStr = String(channel + 1).padStart(2, '0');
+
+    if (!this.rtspPort) {
+      throw new InvalidParameterError("RTSP port not available");
+    }
+
+    // Try autotrack/baichuan format first if applicable
+    if (effectiveStream === "autotrack" || this.baichuanOnly) {
+      const url = `rtsp://${this.username}:${this.encPassword}@${this.host}:${this.rtspPort}/Preview_${channelStr}_${effectiveStream}`;
+      return url;
+    }
+
+    // Get encoding for the stream
+    const encoding = await this.getEncoding(channel, effectiveStream);
+
+    // Try encoding-specific URL
+    const url = `rtsp://${this.username}:${this.encPassword}@${this.host}:${this.rtspPort}/${encoding}Preview_${channelStr}_${effectiveStream}`;
+    
+    // For now, return the URL without validation
+    // Full RTSP validation would require an RTSP client library
+    return url;
+  }
+
+  /**
+   * Get RTMP stream URL
+   * @param channel - Channel number
+   * @param stream - Stream type (defaults to this.stream)
+   * @returns RTMP URL or null
+   */
+  getRtmpStreamSource(channel: number, stream?: string): string | null {
+    // Check if channel has streaming capability
+    const validChannels = this.streamChannels.length > 0 ? this.streamChannels : this.channels;
+    if (!validChannels.includes(channel)) {
+      return null;
+    }
+
+    if (!this.rtmpPort) {
+      return null;
+    }
+
+    const streamType = stream ?? this.stream;
+
+    // Determine stream type number
+    let streamTypeNum: number;
+    if (streamType === "sub" || streamType === "autotrack_sub" || streamType === "telephoto_sub") {
+      streamTypeNum = 1;
+    } else {
+      streamTypeNum = 0;
+    }
+
+    // Build URL based on authentication method
+    if (this.rtmpAuthMethod === DEFAULT_RTMP_AUTH_METHOD) {
+      // Password authentication (uses unencoded password)
+      return `rtmp://${this.host}:${this.rtmpPort}/bcs/channel${channel}_${streamType}.bcs?channel=${channel}&stream=${streamTypeNum}&user=${this.username}&password=${this.password}`;
+    } else {
+      // Token authentication
+      return `rtmp://${this.host}:${this.rtmpPort}/bcs/channel${channel}_${streamType}.bcs?channel=${channel}&stream=${streamTypeNum}&token=${this.token}`;
+    }
+  }
+
+  /**
+   * Get FLV stream URL
+   * @param channel - Channel number
+   * @param stream - Stream type (defaults to this.stream)
+   * @returns FLV URL or null
+   */
+  getFlvStreamSource(channel: number, stream?: string): string | null {
+    // Check if channel has streaming capability
+    const validChannels = this.streamChannels.length > 0 ? this.streamChannels : this.channels;
+    if (!validChannels.includes(channel)) {
+      return null;
+    }
+
+    if (!this.rtmpPort) {
+      return null;
+    }
+
+    const streamType = stream ?? this.stream;
+
+    const protocol = this.useHttps === false ? "http" : this.useHttps === true ? "https" : "http";
+    const port = this.port ?? (this.useHttps ? 443 : 80);
+
+    // FLV uses unencoded password
+    return `${protocol}://${this.host}:${port}/flv?port=${this.rtmpPort}&app=bcs&stream=channel${channel}_${streamType}.bcs&user=${this.username}&password=${this.password}`;
+  }
+
+  /**
+   * Get encoding type for a stream
+   * @param channel - Channel number
+   * @param stream - Stream type (default: "main")
+   * @returns Encoding type ("h264" or "h265")
+   */
+  async getEncoding(channel: number, stream: string = "main"): Promise<string> {
+    // Fetch encoding settings if not cached
+    // Note: GetEnc is fetched via getChannelData, so this should already be populated
+    // If not, we'll use fallback values
+    return this.encoding(channel, stream);
+  }
+
+  /**
+   * Get cached encoding type for a stream
+   * @param channel - Channel number
+   * @param stream - Stream type (default: "main")
+   * @returns Encoding type ("h264" or "h265")
+   */
+  encoding(channel: number, stream: string = "main"): string {
+    const channelSettings = this.encSettings.get(channel);
+    if (channelSettings) {
+      const streamKey = `${stream}Stream`;
+      const vType = (channelSettings as any)[streamKey]?.vType;
+      if (vType) {
+        return vType;
+      }
+    }
+
+    // Fallback logic
+    if (stream === "sub") {
+      return "h264";
+    }
+
+    // Check if main stream supports h265
+    // This would require API version checking which we'll implement later
+    // For now, default to h264
+    return "h264";
+  }
+
+  /**
+   * Get snapshot/still image from camera
+   * @param channel - Channel number
+   * @param stream - Stream type (default: "main")
+   * @returns JPEG image data or null
+   */
+  async getSnapshot(channel: number, stream?: string): Promise<Buffer | null> {
+    // Check if channel has streaming capability
+    const validChannels = this.streamChannels.length > 0 ? this.streamChannels : this.channels;
+    if (!validChannels.includes(channel)) {
+      return null;
+    }
+
+    let streamType = stream ?? "main";
+
+    // Check privacy mode - baichuan has a privacyModeMap property
+    // For now, skip privacy mode check as we don't have direct access
+    // TODO: Add proper privacy mode checking via baichuan
+
+    // Build parameters
+    const param: Record<string, any> = {
+      cmd: "Snap",
+      channel: channel
+    };
+
+    // Handle special stream types
+    if (streamType.startsWith("autotrack_") || streamType.startsWith("telephoto_")) {
+      param.iLogicChannel = 1;
+      streamType = streamType.replace(/^autotrack_/, "").replace(/^telephoto_/, "");
+    }
+
+    if (streamType.startsWith("snapshots_")) {
+      streamType = streamType.replace(/^snapshots_/, "");
+    }
+
+    // Validate stream type
+    if (streamType !== "main" && streamType !== "sub") {
+      streamType = "main";
+    }
+
+    param.snapType = streamType;
+
+    // For sub stream, include dimensions if available
+    if (streamType === "sub") {
+      const channelSettings = this.encSettings.get(channel);
+      if (channelSettings) {
+        const subStream = (channelSettings as any).subStream;
+        if (subStream?.height && subStream?.width) {
+          param.width = subStream.width;
+          param.height = subStream.height;
+        }
+      }
+    }
+
+    try {
+      const response = await this.send([{}], param, "image/jpeg");
+      
+      if (!response || (response as Buffer).length === 0) {
+        debugLog(`Error obtaining still image response for channel ${channel}`);
+        return null;
+      }
+
+      return response as Buffer;
+    } catch (err) {
+      debugLog(`Error getting snapshot: ${err}`);
+      return null;
     }
   }
 

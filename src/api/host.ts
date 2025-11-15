@@ -568,6 +568,12 @@ export class Host {
             if (item.code === 1 && item.cmd === "Login") {
               throw new CredentialsInvalidError(`Invalid credentials: ${item.detail || ""}`);
             }
+            // Ignore responses for unsupported commands (cmd: "Unknown", code: 1)
+            // This prevents error spam when polling for state on cameras that don't support certain features
+            if (item.code === 1 && item.cmd === "Unknown") {
+              debugLog(`Ignoring unsupported command response: ${JSON.stringify(item)}`);
+              return [];
+            }
             // For other commands, return the error response and let caller handle it
             // Don't throw here - the caller will check the code
           }

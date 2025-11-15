@@ -14,9 +14,9 @@ import { Host } from '../src';
 
 async function main() {
   // UPDATE THESE VALUES
-  const cameraIp = '192.168.0.79';
-  const username = 'admin';
-  const password = 'ABC123abc';
+  const cameraIp = process.env.REOLINK_NVR_HOST ?? '192.168.0.79';
+  const username = process.env.REOLINK_NVR_USER ?? 'admin';
+  const password = process.env.REOLINK_NVR_PASS ?? 'ABC123abc';
   const channel = 1; // Channel to control
 
   console.log('🎛️  Device Control Example\n');

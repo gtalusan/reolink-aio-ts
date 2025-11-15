@@ -14,9 +14,9 @@ import * as path from 'path';
 
 // Configuration - UPDATE THESE VALUES
 const CONFIG = {
-  host: '192.168.0.79',
-  username: 'admin',
-  password: 'password',
+  host: process.env.REOLINK_NVR_HOST ?? '192.168.0.79',
+  username: process.env.REOLINK_NVR_USER ?? 'admin',
+  password: process.env.REOLINK_NVR_PASS ?? 'password',
   port: null,  // null for auto-detect
   useHttps: false,
 };

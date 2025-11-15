@@ -12,7 +12,7 @@ import { Host } from '../src/api/host';
 async function basicConnection() {
   // Initialize connection
   // UPDATE THESE VALUES FOR YOUR CAMERA/NVR
-  const host = new Host('192.168.1.100', 'admin', 'your_password');
+  const host = new Host(process.env.REOLINK_NVR_HOST ?? '192.168.1.100', process.env.REOLINK_NVR_USER ?? 'admin', process.env.REOLINK_NVR_PASS ?? 'your_password');
 
   try {
     console.log('🔌 Connecting to device...');

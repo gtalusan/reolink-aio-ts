@@ -19,9 +19,9 @@ import { Host } from '../src';
 import { PtzEnum, GuardEnum } from '../src/enums';
 
 // Configuration
-const CAMERA_IP = '192.168.0.79';  // Change to your camera's IP
-const USERNAME = 'admin';
-const PASSWORD = 'password';    // Change to your password
+const CAMERA_IP = process.env.REOLINK_NVR_HOST ?? '192.168.0.79';  // Change to your camera's IP
+const USERNAME = process.env.REOLINK_NVR_USER ?? 'admin';
+const PASSWORD = process.env.REOLINK_NVR_PASS ?? 'password';    // Change to your password
 const CHANNEL = 0;                   // Channel number (0 for standalone cameras)
 
 async function demonstratePTZ() {

@@ -18,7 +18,7 @@ interface WebhookConfig {
 
 async function eventWebhookServer() {
   // UPDATE THESE VALUES FOR YOUR CAMERA/NVR
-  const host = new Host('192.168.1.100', 'admin', 'your_password');
+  const host = new Host(process.env.REOLINK_NVR_HOST ?? '192.168.1.100', process.env.REOLINK_NVR_USER ?? 'admin', process.env.REOLINK_NVR_PASS ?? 'your_password');
   
   // Webhook configuration
   const webhookUrl = process.env.WEBHOOK_URL || 'http://localhost:3001/webhook';

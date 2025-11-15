@@ -96,6 +96,7 @@ describe("Optimization Features", () => {
       // Mock successful login
       mockInstance.post.mockResolvedValueOnce({
         status: 200,
+        headers: { 'content-type': 'application/json' },
         data: [{
           code: 0,
           value: {
@@ -172,6 +173,7 @@ describe("Optimization Features", () => {
       // Mock successful login
       mockInstance.post.mockResolvedValueOnce({
         status: 200,
+        headers: { 'content-type': 'application/json' },
         data: [{
           code: 0,
           value: {

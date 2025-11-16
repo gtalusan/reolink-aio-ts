@@ -101,6 +101,8 @@ export class Host {
   // States
   private motionDetectionStates: Map<number, boolean> = new Map();
   private aiDetectionStates: Map<number, Map<string, boolean>> = new Map();
+  // Perimeter (Smart AI) detection flags per channel per type (e.g., crossline, intrusion)
+  private perimeterDetectionStates: Map<number, Map<string, boolean>> = new Map();
   private visitorStates: Map<number, boolean> = new Map();
 
   // Settings
@@ -973,7 +975,34 @@ export class Host {
 
   aiDetected(channel: number, objectType: string): boolean {
     const aiVal = this.aiDetectionStates.get(channel)?.get(objectType);
-    return aiVal || false;
+    return typeof aiVal === 'boolean' ? aiVal : false;
+  }
+
+  // Perimeter (Smart AI) helpers
+  private perimeterDetected(channel: number, perimeterType: string): boolean {
+    const perim = this.perimeterDetectionStates.get(channel)?.get(perimeterType);
+    return typeof perim === 'boolean' ? perim : false;
+  }
+
+  crosslineDetected(channel: number): boolean {
+    return this.perimeterDetected(channel, 'crossline');
+  }
+
+  intrusionDetected(channel: number): boolean {
+    return this.perimeterDetected(channel, 'intrusion');
+  }
+
+  loiteringDetected(channel: number): boolean {
+    return this.perimeterDetected(channel, 'loitering');
+  }
+
+  // Some firmwares use legacy/loss for forgotten/taken
+  forgottenDetected(channel: number): boolean {
+    return this.perimeterDetected(channel, 'legacy');
+  }
+
+  takenDetected(channel: number): boolean {
+    return this.perimeterDetected(channel, 'loss');
   }
 
   visitorDetected(channel: number): boolean {
@@ -2567,6 +2596,11 @@ export class Host {
 
   set _isHub(value: boolean) {
     this.isHub = value;
+  }
+
+  // Expose perimeter map to Baichuan for updates
+  get _perimeterDetectionStates(): Map<number, Map<string, boolean>> {
+    return this.perimeterDetectionStates;
   }
 
   get _numChannels(): number {

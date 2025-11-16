@@ -369,9 +369,9 @@ new Host(
 ### Low Priority
 
 - [ ] **Optimization**
-  - [ ] Connection pooling
-  - [ ] Request batching
-  - [ ] Caching layer
+  - [x] Connection pooling
+  - [x] Request batching
+  - [x] Caching layer
 
 - [ ] **Testing**
   - [ ] Integration tests

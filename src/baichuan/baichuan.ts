@@ -931,6 +931,44 @@ export class Baichuan {
                 }
               }
 
+              // Parse Smart AI (perimeter) states, if present
+              if (alarmEvent.smartAiTypeList !== undefined) {
+                // Ensure we have a map to update
+                let perimMap = this.httpApi._perimeterDetectionStates.get(channel);
+                if (!perimMap) {
+                  perimMap = new Map<string, boolean>();
+                  this.httpApi._perimeterDetectionStates.set(channel, perimMap);
+                }
+
+                const list = Array.isArray(alarmEvent.smartAiTypeList)
+                  ? alarmEvent.smartAiTypeList
+                  : [alarmEvent.smartAiTypeList].filter(Boolean);
+
+                const seen = new Set<string>();
+                for (const item of list) {
+                  if (!item) continue;
+                  const smart = (item as any).smartAiType ?? item;
+                  const perimeterType = smart?.type as string | undefined;
+                  if (!perimeterType) continue;
+                  seen.add(perimeterType);
+                  const prev = perimMap.get(perimeterType) || false;
+                  if (!prev) {
+                    debugLog(`Reolink ${this.httpApi.nvrName} TCP event channel ${channel}, perimeter ${perimeterType}: true`);
+                  }
+                  perimMap.set(perimeterType, true);
+                }
+
+                // For known perimeter types not seen in this event, set false
+                for (const type of Object.keys(SMART_AI)) {
+                  if (!seen.has(type)) {
+                    if (perimMap.get(type)) {
+                      debugLog(`Reolink ${this.httpApi.nvrName} TCP event channel ${channel}, perimeter ${type}: false`);
+                    }
+                    perimMap.set(type, false);
+                  }
+                }
+              }
+
               // Execute callbacks
               this.executeCallbacks(cmdId, channel);
               this.executeCallbacks(cmdId, null); // Execute channel-agnostic callbacks

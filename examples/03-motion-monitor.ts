@@ -82,11 +82,11 @@ async function motionMonitor() {
       console.log(`      Face: ${face ? '🔴 DETECTED' : '🟢 Clear'}`);
       console.log(`      Package: ${package_ ? '🔴 DETECTED' : '🟢 Clear'}`);
       console.log(`      Visitor: ${visitor ? '🔴 DETECTED' : '🟢 Clear'}`);
-      console.log(`      Crossline: ${crossline ? '🔴 DETECTED' : '🟢 Clear'}`);
-      console.log(`      Intrusion: ${intrusion ? '🔴 DETECTED' : '🟢 Clear'}`);
-      console.log(`      Loitering: ${loitering ? '🔴 DETECTED' : '🟢 Clear'}`);
-      console.log(`      Forgotten: ${forgotten ? '🔴 DETECTED' : '🟢 Clear'}`);
-      console.log(`      Taken: ${taken ? '🔴 DETECTED' : '🟢 Clear'}`);
+      console.log(`      Crossline: ${crossline?.size ? '🔴 DETECTED' : '🟢 Clear'}`);
+      console.log(`      Intrusion: ${intrusion?.size ? '🔴 DETECTED' : '🟢 Clear'}`);
+      console.log(`      Loitering: ${loitering?.size ? '🔴 DETECTED' : '🟢 Clear'}`);
+      console.log(`      Forgotten: ${forgotten?.size ? '🔴 DETECTED' : '🟢 Clear'}`);
+      console.log(`      Taken: ${taken?.size ? '🔴 DETECTED' : '🟢 Clear'}`);
     }
 
     // Subscribe to events
@@ -116,7 +116,7 @@ async function motionMonitor() {
           const taken = host.takenDetected(channel);
           
           // Only log when there's activity
-          if (motion || person || vehicle || pet || face || package_ || visitor || crossline || intrusion || loitering || forgotten || taken) {
+          if (motion || person || vehicle || pet || face || package_ || visitor || crossline?.size || intrusion?.size || loitering?.size || forgotten?.size || taken?.size) {
             const timestamp = new Date().toLocaleTimeString();
             console.log(`[${timestamp}] Channel ${channel} (${host.cameraName(channel)}):`);
             if (motion) console.log('   ⚠️  Motion detected!');
@@ -126,11 +126,11 @@ async function motionMonitor() {
             if (face) console.log('   😊 Face detected!');
             if (package_) console.log('   📦 Package detected!');
             if (visitor) console.log('   🚪 Visitor detected!');
-            if (crossline) console.log('   ↔️  Crossline detected!');
-            if (intrusion) console.log('   🥷 Intrusion detected!');
-            if (loitering) console.log('   💤 Loitering detected!');
-            if (forgotten) console.log('   🧱 Forgotten detected!');
-            if (taken) console.log('   🤷 Taken detected!');
+            if (crossline?.size) console.log('   ↔️  Crossline detected!');
+            if (intrusion?.size) console.log('   🥷 Intrusion detected!');
+            if (loitering?.size) console.log('   💤 Loitering detected!');
+            if (forgotten?.size) console.log('   🧱 Forgotten detected!');
+            if (taken?.size) console.log('   🤷 Taken detected!');
             console.log('');
           }
         }

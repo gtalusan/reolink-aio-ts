@@ -90,6 +90,7 @@ Demonstrates how to:
 - Subscribe to Baichuan events
 - Display motion events as they occur
 - Track motion state changes
+ - Observe Smart AI perimeter events (crossline, intrusion, loitering, forgotten, taken)
 
 **Run:**
 ```bash

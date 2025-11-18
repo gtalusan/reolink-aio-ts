@@ -899,8 +899,16 @@ export class Baichuan {
                 const aiTypesList = aiTypesStr.split(',').map(t => t.trim());
                 const aiStates = this.httpApi._aiDetectionStates.get(channel);
                 
+                // Set of perimeter types that should not be set based on AItype
+                const perimeterTypes = new Set(Object.keys(SMART_AI));
+                
                 if (aiStates) {
                   for (const [aiTypeKey, oldState] of aiStates.entries()) {
+                    // Skip perimeter types - they are handled separately via smartAiTypeList
+                    if (perimeterTypes.has(aiTypeKey)) {
+                      continue;
+                    }
+                    
                     // Check if aiTypeKey is in the list of AI types
                     const aiState = aiTypesList.includes(aiTypeKey);
                     if (aiState !== oldState) {
@@ -926,6 +934,33 @@ export class Baichuan {
                     if (!this.logOnce.has(logKey)) {
                       this.logOnce.add(logKey);
                       debugLog(`Reolink ${this.httpApi.nvrName} TCP event channel ${channel}, received unknown AI event type: ${aiType}`);
+                    }
+                  }
+                }
+
+                // Parse Smart AI (perimeter) states, if present
+                if (alarmEvent.smartAiTypeList?.smartAiType && aiStates) {
+                  const smartAiTypeList = Array.isArray(alarmEvent.smartAiTypeList.smartAiType)
+                    ? alarmEvent.smartAiTypeList.smartAiType
+                    : [alarmEvent.smartAiTypeList.smartAiType];
+
+                  for (const item of smartAiTypeList) {
+                    if (!item) continue;
+                    const perimeterType = item.type as string | undefined;
+                    const bitmask = item.index as number | undefined;
+                    
+                    if (!perimeterType) continue;
+                    
+                    // Check if this perimeter type is in aiStates
+                    if (aiStates.has(perimeterType)) {
+                      // Set to true if bitmask > 0, false otherwise
+                      const perimeterActive = bitmask !== undefined && bitmask > 0;
+                      const oldState = aiStates.get(perimeterType);
+                      
+                      if (perimeterActive !== oldState) {
+                        debugLog(`Reolink ${this.httpApi.nvrName} TCP event channel ${channel}, ${perimeterType}: ${perimeterActive}`);
+                      }
+                      aiStates.set(perimeterType, perimeterActive);
                     }
                   }
                 }

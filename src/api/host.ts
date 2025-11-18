@@ -100,9 +100,7 @@ export class Host {
 
   // States
   private motionDetectionStates: Map<number, boolean> = new Map();
-  private aiDetectionStates: Map<number, Map<string, boolean>> = new Map();
-  // Perimeter (Smart AI) detection: per channel, per type, set of active zone IDs
-  private perimeterDetectionStates: Map<number, Map<string, Set<number>>> = new Map();
+  private aiDetectionStates: Map<number, Map<string, boolean | Map<number, string>>> = new Map();
   private visitorStates: Map<number, boolean> = new Map();
 
   // Settings
@@ -975,45 +973,34 @@ export class Host {
 
   aiDetected(channel: number, objectType: string): boolean {
     const aiVal = this.aiDetectionStates.get(channel)?.get(objectType);
-    return typeof aiVal === 'boolean' ? aiVal : false;
+    return aiVal as boolean || false;
   }
 
   // Perimeter (Smart AI) helpers
-  private perimeterDetected(channel: number, perimeterType: string): boolean {
-    const zones = this.perimeterDetectionStates.get(channel)?.get(perimeterType);
-    return zones ? zones.size > 0 : false;
+  private perimeterDetected(channel: number, perimeterType: string): Map<number, string> {
+    const perimeterVal = this.aiDetectionStates.get(channel)?.get(perimeterType);
+    return perimeterVal as Map<number, string>;
   }
 
-  crosslineDetected(channel: number): boolean {
+  crosslineDetected(channel: number): Map<number, string> {
     return this.perimeterDetected(channel, 'crossline');
   }
 
-  intrusionDetected(channel: number): boolean {
+  intrusionDetected(channel: number): Map<number, string> {
     return this.perimeterDetected(channel, 'intrusion');
   }
 
-  loiteringDetected(channel: number): boolean {
+  loiteringDetected(channel: number): Map<number, string> {
     return this.perimeterDetected(channel, 'loitering');
   }
 
   // Some firmwares use legacy/loss for forgotten/taken
-  forgottenDetected(channel: number): boolean {
+  forgottenDetected(channel: number): Map<number, string> {
     return this.perimeterDetected(channel, 'legacy');
   }
 
-  takenDetected(channel: number): boolean {
+  takenDetected(channel: number): Map<number, string> {
     return this.perimeterDetected(channel, 'loss');
-  }
-
-  /**
-   * Get detailed zone information for a perimeter type
-   * @param channel - Channel number
-   * @param perimeterType - Type: 'crossline', 'intrusion', 'loitering', 'legacy', 'loss'
-   * @returns Array of active zone IDs (from bitmask), or empty array
-   */
-  getPerimeterZones(channel: number, perimeterType: string): number[] {
-    const zones = this.perimeterDetectionStates.get(channel)?.get(perimeterType);
-    return zones ? Array.from(zones).sort((a, b) => a - b) : [];
   }
 
   visitorDetected(channel: number): boolean {
@@ -2609,11 +2596,6 @@ export class Host {
     this.isHub = value;
   }
 
-  // Expose perimeter map to Baichuan for updates
-  get _perimeterDetectionStates(): Map<number, Map<string, Set<number>>> {
-    return this.perimeterDetectionStates;
-  }
-
   get _numChannels(): number {
     return this.numChannels;
   }
@@ -2646,7 +2628,7 @@ export class Host {
     return this.visitorStates;
   }
 
-  get _aiDetectionStates(): Map<number, Map<string, boolean>> {
+  get _aiDetectionStates(): Map<number, Map<string, boolean | Map<number, string>>> {
     return this.aiDetectionStates;
   }
 
